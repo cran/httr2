@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Wrapping APIs</title>
+
+<script src="data:application/javascript;base64,Ly8gUGFuZG9jIDIuOSBhZGRzIGF0dHJpYnV0ZXMgb24gYm90aCBoZWFkZXIgYW5kIGRpdi4gV2UgcmVtb3ZlIHRoZSBmb3JtZXIgKHRvCi8vIGJlIGNvbXBhdGlibGUgd2l0aCB0aGUgYmVoYXZpb3Igb2YgUGFuZG9jIDwgMi44KS4KZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcignRE9NQ29udGVudExvYWRlZCcsIGZ1bmN0aW9uKGUpIHsKICB2YXIgaHMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKCJkaXYuc2VjdGlvbltjbGFzcyo9J2xldmVsJ10gPiA6Zmlyc3QtY2hpbGQiKTsKICB2YXIgaSwgaCwgYTsKICBmb3IgKGkgPSAwOyBpIDwgaHMubGVuZ3RoOyBpKyspIHsKICAgIGggPSBoc1tpXTsKICAgIGlmICghL15oWzEtNl0kL2kudGVzdChoLnRhZ05hbWUpKSBjb250aW51ZTsgIC8vIGl0IHNob3VsZCBiZSBhIGhlYWRlciBoMS1oNgogICAgYSA9IGguYXR0cmlidXRlczsKICAgIHdoaWxlIChhLmxlbmd0aCA+IDApIGgucmVtb3ZlQXR0cmlidXRlKGFbMF0ubmFtZSk7CiAgfQp9KTsK"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<link rel="stylesheet" href="data:text/css,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" type="text/css" />
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Wrapping APIs</h1>
+
+
+
+<p>A common use for httr2 is wrapping up a useful API and exposing it in an R package where each API endpoint (i.e. a URL with parameters) becomes an R function with documented arguments. This vignette will show you how, starting with a very simple API that doesn’t need authentication, then slowly working up in complexity. Along the way, you’ll learn about how to:</p>
+<ul>
+<li><p>Expose important details from HTTP errors in R errors.</p></li>
+<li><p>Handle various types of authentication.</p></li>
+<li><p>Consistently throttle the rate of requests or dynamically respond to rate limiting headers sent by the server.</p></li>
+</ul>
+<p>I assume you’re familiar with the basics of building a package. If not, you might want to read the “<a href="https://r-pkgs.org/whole-game.html">The Whole Game</a>” chapter of <a href="https://r-pkgs.org">R packages</a> first.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(httr2)</span></code></pre></div>
+<div id="faker-api" class="section level2">
+<h2>Faker API</h2>
+<p>We’ll start with a very simple API, <a href="https://fakerapi.it/en" class="uri">faker API</a>, which provides a collection of techniques for generating fake data. Before we start writing the sort of functions that you might put in a package, we’ll perform a request just to see how the basics work:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># We start by creating a request that uses the base API url</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://fakerapi.it/api/v1&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> req <span class="sc">%&gt;%</span> </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Then we add on the images path</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;images&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add query parameters _width and _quantity</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="st">`</span><span class="at">_width</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">380</span>, <span class="st">`</span><span class="at">_quantity</span><span class="st">`</span> <span class="ot">=</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># The result comes back as JSON</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>() <span class="sc">%&gt;%</span> <span class="fu">str</span>()</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ status: chr &quot;OK&quot;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ code  : int 200</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ total : int 1</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ data  :List of 1</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 3</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ title      : chr &quot;Nisi ea laborum et ut qui.&quot;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ description: chr &quot;Ipsum recusandae optio quos et. Eum fuga nobis quia vel. Fuga voluptatibus nisi laborum neque atque. Sint sunt &quot;| __truncated__</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ url        : chr &quot;http://placeimg.com/380/480/any&quot;</span></span></code></pre></div>
+<div id="errors" class="section level3">
+<h3>Errors</h3>
+<p>It’s always worth a little early experimentation to see if we get any useful information from errors. The httr2 defaults get in your way here, because if you retrieve an unsuccessful HTTP response, you automatically get an error that prevents you from further inspecting the body:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;invalid&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error: HTTP 404 Not Found.</span></span></code></pre></div>
+<p>However, you can access the last response (successful or not) with <code>last_response()</code>:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">last_response</span>()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $status</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Not found&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $code</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 404</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $total</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>It doesn’t look like there’s anything useful there. Sometimes useful info is returned in the headers, so let’s check:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_headers</span>()</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_headers&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Server: nginx</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Transfer-Encoding: chunked</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Connection: keep-alive</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Vary: Accept-Encoding</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; X-Powered-By: PHP/7.3.16</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Cache-Control: no-cache, private</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Date: Tue, 21 Sep 2021 17:21:22 GMT</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Access-Control-Allow-Origin: *</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Access-Control-Allow-Methods: GET</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Access-Control-Allow-Credentials: true</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Access-Control-Max-Age: 86400</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Encoding: gzip</span></span></code></pre></div>
+<p>It doesn’t look like we’re getting any more useful information, so we can leave the <code>req_error()</code> default as is. We’ll have another go later with an API that does provide more details.</p>
+</div>
+<div id="user-agent" class="section level3">
+<h3>User agent</h3>
+<p>If you’re wrapping this code into a package, it’s considered polite to set a user agent, so that, if your app accidentally does something horribly wrong, the developers of the website can figure out who to reach out to. You can do this with the <code>req_user_agent()</code> function:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_user_agent</span>(<span class="st">&quot;my_package_name (http://my.package.web.site)&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_dry_run</span>()</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET /api/v1 HTTP/1.1</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Host: fakerapi.it</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; User-Agent: my_package_name (http://my.package.web.site)</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept: */*</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept-Encoding: deflate, gzip</span></span></code></pre></div>
+</div>
+<div id="core-request-function" class="section level3">
+<h3>Core request function</h3>
+<p>Once you’ve made a few successful requests, it’s worth seeing if you can figure out the general pattern so you can wrap it up into a function that will become the core of your package.</p>
+<p>For faker, I spent a little with the <a href="https://fakerapi.it/en#basic-usage">documentation</a> noting some commonalities:</p>
+<ul>
+<li><p>Every URL is of the form <code>https://fakerapi.it/api/v1/{resource}</code>, and data is passed to the resource with query parameters. All parameters start with <code>_</code>.</p></li>
+<li><p>Every resource has three common query parameters: <code>_locale</code>, <code>_quantity</code>, and <code>_seed</code>.</p></li>
+<li><p>All endpoints return JSON data.</p></li>
+</ul>
+<p>This lead me to construct the following function:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>faker <span class="ot">&lt;-</span> <span class="cf">function</span>(resource, ..., <span class="at">quantity =</span> <span class="dv">1</span>, <span class="at">locale =</span> <span class="st">&quot;en_US&quot;</span>, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  params <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    ...,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">quantity =</span> quantity,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">locale =</span> locale,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">seed =</span> seed</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(params) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;_&quot;</span>, <span class="fu">names</span>(params))</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">request</span>(<span class="st">&quot;https://fakerapi.it/api/v1&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_url_path_append</span>(resource) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_url_query</span>(<span class="sc">!!!</span>params) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_user_agent</span>(<span class="st">&quot;my_package_name (http://my.package.web.site)&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_perform</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">resp_body_json</span>()</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(<span class="fu">faker</span>(<span class="st">&quot;images&quot;</span>, <span class="at">width =</span> <span class="dv">300</span>))</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ status: chr &quot;OK&quot;</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ code  : int 200</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ total : int 1</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ data  :List of 1</span></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 3</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ title      : chr &quot;Tempora aliquam quia rerum.&quot;</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ description: chr &quot;Aut omnis velit iusto. Ut facere ex quo molestiae consequatur. Consequatur facere rerum deleniti sit voluptatum&quot;| __truncated__</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ url        : chr &quot;http://placeimg.com/300/480/any&quot;</span></span></code></pre></div>
+<p>I’ve made a few important choices here:</p>
+<ul>
+<li><p>I’ve decided to supply default values for the <code>quantity</code> and <code>locale</code> parameters. This makes my function easier to demo in this vignette.</p></li>
+<li><p>I’ve used a default of <code>NULL</code> for the <code>seed</code> argument. <code>req_url_query()</code> will automatically drop <code>NULL</code> arguments so this means that no default value is sent to the API, but when you read the function definition you can still see that <code>seed</code> is accepted.</p></li>
+<li><p>I automatically all prefix query parameters with <code>_</code> because argument names starting with <code>_</code> are hard to type in R.</p></li>
+<li><p>My function generates the request, performs it, and extracts the body of the response. This works well for simple cases, but for more complex APIs you might want to return a request object that can be modified before being performed.</p></li>
+</ul>
+<p>I also used one cool trick: <code>req_url_query()</code> uses <a href="https://rlang.r-lib.org/reference/dyn-dots.html">dynamic dots</a>, so we can use <code>!!!</code> to convert (e.g.) <code>req_url_query(req, !!!list(`_quantity` = 1, `_locale` = &quot;en_US&quot;))</code> into <code>req_url_query(req, `_quantity` = 1, `_locale` = &quot;en_US&quot;)</code>.</p>
+</div>
+<div id="wrapping-individual-endpoints" class="section level3">
+<h3>Wrapping individual endpoints</h3>
+<p><code>faker()</code> is quite general — it’s a good tool for the package developer because you can read the faker documentation and translate it to a function call. But it’s not very friendly for the package user who might not know anything about web APIs. So typically the next step in the process is to wrap up some individual endpoints with their own functions.</p>
+<p>For example, let’s take the <code>persons</code> endpoint which has three additional parameters: <code>gender</code> (male or female), <code>birthday_start</code>, and <code>birthday_end</code>. A simple wrapper would start something like this:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>faker_person <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">gender =</span> <span class="cn">NULL</span>, <span class="at">birthday_start =</span> <span class="cn">NULL</span>, <span class="at">birthday_end =</span> <span class="cn">NULL</span>, <span class="at">quantity =</span> <span class="dv">1</span>, <span class="at">locale =</span> <span class="st">&quot;en_US&quot;</span>, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">faker</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;persons&quot;</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">gender =</span> gender,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">birthday_start =</span> birthday_start,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">birthday_end =</span> birthday_end,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">quantity =</span> quantity,</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">locale =</span> locale,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">seed =</span> seed</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  )  </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(<span class="fu">faker_person</span>(<span class="st">&quot;male&quot;</span>))</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ status: chr &quot;OK&quot;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ code  : int 200</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ total : int 1</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ data  :List of 1</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 9</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ firstname: chr &quot;Vaughn&quot;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ lastname : chr &quot;Jaskolski&quot;</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ email    : chr &quot;spacocha@cummerata.org&quot;</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ phone    : chr &quot;+4228302790165&quot;</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ birthday : chr &quot;2004-12-12&quot;</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ gender   : chr &quot;male&quot;</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ address  :List of 9</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ street        : chr &quot;515 Susanna Overpass Suite 411&quot;</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ streetName    : chr &quot;Addie Rapids&quot;</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ buildingNumber: chr &quot;85720&quot;</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ city          : chr &quot;Bogisichhaven&quot;</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ zipcode       : chr &quot;98092-2172&quot;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ country       : chr &quot;American Samoa&quot;</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ county_code   : chr &quot;HR&quot;</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ latitude      : num -11.4</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ longitude     : num -0.64</span></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ website  : chr &quot;http://wilderman.biz&quot;</span></span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ image    : chr &quot;http://placeimg.com/640/480/people&quot;</span></span></code></pre></div>
+<p>We could make it more user friendly by checking the input types, and returning the result as a tibble. I did a quick and dirty conversion using purrr; depending on your needs you could use base R code or <code>tidyr::hoist()</code>.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>faker_person <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">gender =</span> <span class="cn">NULL</span>, <span class="at">birthday_start =</span> <span class="cn">NULL</span>, <span class="at">birthday_end =</span> <span class="cn">NULL</span>, <span class="at">quantity =</span> <span class="dv">1</span>, <span class="at">locale =</span> <span class="st">&quot;en_US&quot;</span>, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(gender)) {</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    gender <span class="ot">&lt;-</span> <span class="fu">match.arg</span>(gender, <span class="fu">c</span>(<span class="st">&quot;male&quot;</span>, <span class="st">&quot;female&quot;</span>))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(birthday_start)) {</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">inherits</span>(birthday_start, <span class="st">&quot;Date&quot;</span>)) {</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">stop</span>(<span class="st">&quot;`birthday_start` must be a date&quot;</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    birthday_start <span class="ot">&lt;-</span> <span class="fu">format</span>(birthday_start, <span class="st">&quot;%Y-%m-%d&quot;</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(birthday_end)) {</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">inherits</span>(birthday_end, <span class="st">&quot;Date&quot;</span>)) {</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">stop</span>(<span class="st">&quot;`birthday_end` must be a date&quot;</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    birthday_end <span class="ot">&lt;-</span> <span class="fu">format</span>(birthday_end, <span class="st">&quot;%Y-%m-%d&quot;</span>)</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>  json <span class="ot">&lt;-</span> <span class="fu">faker</span>(</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;persons&quot;</span>,</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">gender =</span> gender,</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">birthday_start =</span> birthday_start,</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">birthday_end =</span> birthday_end,</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">quantity =</span> quantity,</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">locale =</span> locale,</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">seed =</span> seed</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>  )  </span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>  tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">firstname =</span> <span class="fu">map_chr</span>(json<span class="sc">$</span>data, <span class="st">&quot;firstname&quot;</span>),</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">lastname =</span> <span class="fu">map_chr</span>(json<span class="sc">$</span>data, <span class="st">&quot;lastname&quot;</span>),</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">email =</span> <span class="fu">map_chr</span>(json<span class="sc">$</span>data, <span class="st">&quot;email&quot;</span>),</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">gender =</span> <span class="fu">map_chr</span>(json<span class="sc">$</span>data, <span class="st">&quot;gender&quot;</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="fu">faker_person</span>(<span class="st">&quot;male&quot;</span>, <span class="at">quantity =</span> <span class="dv">5</span>)</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 5 × 4</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   firstname lastname email                            gender</span></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;     &lt;chr&gt;    &lt;chr&gt;                            &lt;chr&gt; </span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 Jerrold   Boyer    effertz.christophe@langworth.com male  </span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 Kareem    Bartell  juliet28@yahoo.com               male  </span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 Corbin    Flatley  tara16@pouros.biz                male  </span></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 Sigmund   Gaylord  dedrick.ullrich@brakus.com       male  </span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 Mathias   Swift    vheidenreich@osinski.com         male</span></span></code></pre></div>
+<p>The next steps would be to export and document this function; I’ll leave that up to you.</p>
+</div>
+</div>
+<div id="secret-management" class="section level2">
+<h2>Secret management</h2>
+<p>We need to take a quick break from APIs to talk about secrets. Secrets are important, because every API (except for very simnple APIs like faker) is going to require that you identify yourself in some way, typically with an API key or a token. And even if you expect that your users will usually provide this information, you’re still going to need your own credentials in order to actually test your package.</p>
+<p>This system is probably overkill if you only have one secret that you need to share in one or two places. But you almost invariably accumulate more secrets over time, and more people and computers that you need to share them with, so I think spending a little time to understand this system and set up it for your package will pay off in the long term.</p>
+<div id="basics" class="section level3">
+<h3>Basics</h3>
+<p>httr2 provides <code>secret_encrypt()</code> and <code>secret_decrypt()</code> to scramble secrets so that you can include them in your public source code without worrying that others can read them. There are three basic steps to this process:</p>
+<ol style="list-style-type: decimal">
+<li><p>You create an <strong>encryption</strong> key with <code>secret_make_key()</code> that is used to scramble and descramble secrets using symmetric cryptography:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>key <span class="ot">&lt;-</span> <span class="fu">secret_make_key</span>()</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>key</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;BeDI4YQwThhrAk8YXL8qgQ&quot;</span></span></code></pre></div>
+<p>(Note that <code>secret_make_key()</code> uses a cryptographically secure random number generator provided by OpenSSL; it is not affected by R’s RNG settings, and there’s no way to make it reproducible.)</p></li>
+<li><p>You scramble your secrets with <code>secret_encrypt()</code> and store the resulting text directly in the source code of your package:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>secret_scrambled <span class="ot">&lt;-</span> <span class="fu">secret_encrypt</span>(<span class="st">&quot;secret I need to work with an API&quot;</span>, key)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>secret_scrambled</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;1A-5OTb6_g7a6pjsSKjCapGF_jnQ7OgQ68ibzG9FarWY1HNUgKmGU1mOJ7AuOip14Q&quot;</span></span></code></pre></div></li>
+<li><p>When needed, you descramble the the secret using <code>secret_decrypt()</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">secret_decrypt</span>(secret_scrambled, key)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;secret I need to work with an API&quot;</span></span></code></pre></div></li>
+</ol>
+</div>
+<div id="package-keys-and-secrets" class="section level3">
+<h3>Package keys and secrets</h3>
+<p>You can create any number of encryption keys, but I highly recommend that you create one key per package, which I’ll call the <strong>package</strong> key. In this section, I’ll show you how to store that key so that you (and your automated tests) can use it, but no one else can.</p>
+<p>httr2 is built around the notion that this key should live in an environment variable. So the first step is to make your package key available on your local development machine by adding a line to your your user-level <code>.Renviron</code> (which you can easily open with <code>usethis::edit_r_environ()</code>):</p>
+<pre><code>YOURPACKAGE_KEY=key_you_generated_with_secret_make_key</code></pre>
+<p>Now (after you restart R), you’ll be able to take advantage of a special <code>secret_encrypt()</code> and <code>secret_decrypt()</code> feature: the <code>key</code> argument can be the name of an environment variable, instead of the encryption key itself. In fact, this is most natural usage.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>secret_scrambled <span class="ot">&lt;-</span> <span class="fu">secret_encrypt</span>(<span class="st">&quot;secret I need to work with an API&quot;</span>, <span class="st">&quot;YOURPACKAGE_KEY&quot;</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>secret_scrambled</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;djg6e7Vsta_KzQB7HPc1ehYDU-AcJdLsgNdpkujkTBdlE5VhLZsz379_2ZZQvxa3wg&quot;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">secret_decrypt</span>(secret_scrambled, <span class="st">&quot;YOURPACKAGE_KEY&quot;</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;secret I need to work with an API&quot;</span></span></code></pre></div>
+<p>You’ll also need to make the key available in your GitHub Actions (both check and pkgdown) so your automated tests can use it. This requires two steps:</p>
+<ol style="list-style-type: decimal">
+<li><p>Add the key to your <a href="https://docs.github.com/en/actions/reference/encrypted-secrets">repository secrets</a>.</p></li>
+<li><p>Share the key with the workflows that need it by adding a line to the appropriate workflow:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">env</span><span class="kw">:</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">YOURPACKAGE_KEY</span><span class="kw">:</span><span class="at"> ${{ secrets.YOURPACKAGE_KEY }}</span></span></code></pre></div>
+<p>You can see how httr2 does it in <a href="https://github.com/r-lib/httr2/blob/master/.github/workflows/R-CMD-check.yaml" class="uri">its GitHub workflow</a>.</p></li>
+</ol>
+<p>Other continuous integration platforms will offer similar ways to make a key available as a secure environment variable.</p>
+</div>
+<div id="when-the-package-key-isnt-available" class="section level3">
+<h3>When the package key isn’t available</h3>
+<p>There are a few important cases where your code won’t have access to your package key: on CRAN, on the personal machines of external contributors, and in automated checks on their PRs. So if you want to share your package on CRAN or make it easy for others to contribute, you need to make sure that your examples, vignettes, and tests all work without error:</p>
+<ul>
+<li><p>In vignettes, you can run <code>knitr::opts_chunk(eval = secret_has_key(&quot;YOURPACKAGE_KEY&quot;))</code> so that chunks are only evaluated if your key is available.</p></li>
+<li><p>In examples, you can surround code blocks that require your key with <code>if (httr2::secret_has_key(&quot;YOURPACKAGE_KEY&quot;)) {}</code></p></li>
+<li><p>You don’t need to do anything in tests because when <code>secret_decrypt()</code> is run by testhat, it will automatically <code>skip()</code> the test if the key isn’t available.</p></li>
+</ul>
+</div>
+</div>
+<div id="nytimes-books-api" class="section level2">
+<h2>NYTimes Books API</h2>
+<p>Next we’ll take a look at the NYTimes <a href="https://developer.nytimes.com/docs/books-product/1/overview">Books API</a>. It requires a very simple authentication with an API key that’s included in every request. When you’re wrapping an API that has a key you’re going to face two struggles:</p>
+<ul>
+<li><p>How do you test your package without sharing your key with the whole world?</p></li>
+<li><p>How do you allow your users to supply their own key, without having to pass it to every function?</p></li>
+</ul>
+<p>So now you can understand how the following code works to get my NYTimes Book API key:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>my_key <span class="ot">&lt;-</span> <span class="fu">secret_decrypt</span>(<span class="st">&quot;4Nx84VPa83dMt3X6bv0fNBlLbv3U4D1kHM76YisKEfpCarBm1UHJHARwJHCFXQSV&quot;</span>, <span class="st">&quot;HTTR2_KEY&quot;</span>)</span></code></pre></div>
+<p>I’ll start by tackling the first problem because otherwise there’s no way for me to show how the API works in this vignette 😃. We’ll come back to the second at the very end of this section, because it’s easiest to tackle once we have a function in place.</p>
+<div id="security-considerations" class="section level3">
+<h3>Security considerations</h3>
+<p>Note that including an API key as a query parameter is relatively insecure; if an API uses this method of auth, it’s typically because the key is relatively easy to create or gives relatively few privileges. Here it only takes a couple of minutes to generate your own NYTimes API key, so there’s little incentive for someone to try and steal yours.</p>
+<p>The main problem of conveying credentials via the url is that it’s easily exposed, because httr2 makes no efforts to redact confidential information stored in query parameters. This means it’s relatively easy to leak your key if you use <code>req_perform(verbose = 1)</code>, <code>req_dry_run()</code>, or even just print the request object. And indeed, you’ll see that in the examples below — this is bad practice for a real package, but I think it’s ok here because the key doesn’t allow you to do anything valuable and it makes teaching APIs so much easier.</p>
+</div>
+<div id="basic-request" class="section level3">
+<h3>Basic request</h3>
+<p>Now let’s perform a test request and look at the response:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.nytimes.com/svc/books/v3&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;/reviews.json&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="st">`</span><span class="at">api-key</span><span class="st">`</span> <span class="ot">=</span> my_key, <span class="at">isbn =</span> <span class="dv">9780307476463</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>resp</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_response&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; https://api.nytimes.com/svc/books/v3/reviews.json?api-key=qZ4iJAGzcL5drrRDErhTvuRalSlZxut4&amp;isbn=9780307476463</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Status: 200 OK</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: In memory (1349 bytes)</span></span></code></pre></div>
+<p>Like most modern APIs, this one returns the results as JSON:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> </span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">resp_body_json</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str</span>()</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ status     : chr &quot;OK&quot;</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ copyright  : chr &quot;Copyright (c) 2021 The New York Times Company.  All Rights Reserved.&quot;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ num_results: int 2</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ results    :List of 2</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 9</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ url           : chr &quot;http://www.nytimes.com/2011/11/10/books/1q84-by-haruki-murakami-review.html&quot;</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ publication_dt: chr &quot;2011-11-10&quot;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ byline        : chr &quot;JANET MASLIN&quot;</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ book_title    : chr &quot;1Q84&quot;</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ book_author   : chr &quot;Haruki Murakami&quot;</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ summary       : chr &quot;In “1Q84,” the Japanese novelist Haruki Murakami writes about characters in a Tokyo with two moons.&quot;</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ uuid          : chr &quot;00000000-0000-0000-0000-000000000000&quot;</span></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ uri           : chr &quot;nyt://book/00000000-0000-0000-0000-000000000000&quot;</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ isbn13        :List of 9</span></span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780307476463&quot;</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780307593313&quot;</span></span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780307957023&quot;</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780345802934&quot;</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781446484197&quot;</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781446484203&quot;</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781455830497&quot;</span></span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781469258843&quot;</span></span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9788483832967&quot;</span></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 9</span></span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ url           : chr &quot;http://www.nytimes.com/2011/11/06/books/review/1q84-by-haruki-murakami-translated-by-jay-rubin-and-philip-gabri&quot;| __truncated__</span></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ publication_dt: chr &quot;2011-11-06&quot;</span></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ byline        : chr &quot;KATHRYN SCHULZ&quot;</span></span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ book_title    : chr &quot;1Q84&quot;</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ book_author   : chr &quot;Haruki Murakami&quot;</span></span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ summary       : chr &quot;Haruki Murakami has translated Raymond Chandler into Japanese, and there’s a lot of Marlowe to his madness.&quot;</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ uuid          : chr &quot;00000000-0000-0000-0000-000000000000&quot;</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ uri           : chr &quot;nyt://book/00000000-0000-0000-0000-000000000000&quot;</span></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. ..$ isbn13        :List of 9</span></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780307476463&quot;</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780307593313&quot;</span></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780307957023&quot;</span></span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9780345802934&quot;</span></span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781446484197&quot;</span></span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781446484203&quot;</span></span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781455830497&quot;</span></span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9781469258843&quot;</span></span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   .. .. ..$ : chr &quot;9788483832967&quot;</span></span></code></pre></div>
+<p>Before we start wrapping this up into a function, let’s consider what happens with errors.</p>
+</div>
+<div id="error-handling" class="section level3">
+<h3>Error handling</h3>
+<p>What happens if there’s an error? For example, if we deliberately supply an invalid key:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.nytimes.com/svc/books/v3&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;/reviews.json&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="st">`</span><span class="at">api-key</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;invalid&quot;</span>, <span class="at">isbn =</span> <span class="dv">9780307476463</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error: HTTP 401 Unauthorized.</span></span></code></pre></div>
+<p>To see if there’s any extra useful information we can again look at <code>last_response():</code></p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">last_response</span>()</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>resp</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_response&gt;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; https://api.nytimes.com/svc/books/v3/reviews.json?api-key=invalid&amp;isbn=9780307476463</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Status: 401 Unauthorized</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: In memory (90 bytes)</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>()</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $fault</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $fault$faultstring</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Invalid ApiKey&quot;</span></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $fault$detail</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $fault$detail$errorcode</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;oauth.v2.InvalidApiKey&quot;</span></span></code></pre></div>
+<p>It looks like there’s some useful additional info in the <code>faultstring</code>:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>() <span class="sc">%&gt;%</span> .<span class="sc">$</span>fault <span class="sc">%&gt;%</span> .<span class="sc">$</span>faultstring</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Invalid ApiKey&quot;</span></span></code></pre></div>
+<p>To add that information to future errors we can use the <code>body</code> argument to <code>req_error()</code>. This should be a function that takes a response and returns a character vector of additional information to include in the error. Once we do that and re-fetch the request, we see the additional information displayed in the R error:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>nytimes_error_body <span class="ot">&lt;-</span> <span class="cf">function</span>(resp) {</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>() <span class="sc">%&gt;%</span> .<span class="sc">$</span>fault <span class="sc">%&gt;%</span> .<span class="sc">$</span>faultstring</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.nytimes.com/svc/books/v3&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;/reviews.json&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="st">`</span><span class="at">api-key</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;invalid&quot;</span>, <span class="at">isbn =</span> <span class="dv">9780307476463</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_error</span>(<span class="at">body =</span> nytimes_error_body) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error: HTTP 401 Unauthorized.</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; * Invalid ApiKey</span></span></code></pre></div>
+</div>
+<div id="rate-limits" class="section level3">
+<h3>Rate limits</h3>
+<p>Another common source of errors is rate-limiting — this is used by many servers to prevent one unruly client consuming too many resources. The <a href="https://developer.nytimes.com/faq#a11">frequently asked questions</a> page describes the rate limits for the NYT APIs:</p>
+<blockquote>
+<p>Yes, there are two rate limits per API: 4,000 requests per day and 10 requests per minute. You should sleep 6 seconds between calls to avoid hitting the per minute rate limit. If you need a higher rate limit, please contact us at <a href="mailto:code@nytimes.com" class="email">code@nytimes.com</a>.</p>
+</blockquote>
+<p>Many APIs return additional information about how long to wait when the rate limit is exceeded (often using the <code>Retry-After</code> header). So I deliberately violated the rate limit by quickly making 11 requests; unfortunately while the response was a standard 429 (Too many requests), it did not include any information about how long to wait in either the response body or the headers. That means we can’t use <code>req_retry()</code>, which automatically waits the amount of time the server requests. Instead, we’ll use <code>req_throttle()</code> to ensure we don’t make more than 10 requests every 60 seconds:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.nytimes.com/svc/books/v3&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;/reviews.json&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="st">`</span><span class="at">api-key</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;invalid&quot;</span>, <span class="at">isbn =</span> <span class="dv">9780307476463</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_throttle</span>(<span class="dv">10</span> <span class="sc">/</span> <span class="dv">60</span>)</span></code></pre></div>
+<p>By default, <code>req_throttle()</code> shares the limit across all requests made to the host (i.e. <code>api.nytimes.com</code>). Since the docs suggest the rate limit applies per API, you might want to use the <code>realm</code> argument to be a bit more specific:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.nytimes.com/svc/books/v3&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;/reviews.json&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="st">`</span><span class="at">api-key</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;invalid&quot;</span>, <span class="at">isbn =</span> <span class="dv">9780307476463</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_throttle</span>(<span class="dv">10</span> <span class="sc">/</span> <span class="dv">60</span>, <span class="at">realm =</span> <span class="st">&quot;https://api.nytimes.com/svc/books&quot;</span>)</span></code></pre></div>
+</div>
+<div id="wrapping-it-up" class="section level3">
+<h3>Wrapping it up</h3>
+<p>Putting together all the pieces above yields a function something like this:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>nytimes_books <span class="ot">&lt;-</span> <span class="cf">function</span>(api_key, path, ...) {</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">request</span>(<span class="st">&quot;https://api.nytimes.com/svc/books/v3&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_url_path_append</span>(<span class="st">&quot;/reviews.json&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_url_query</span>(..., <span class="st">`</span><span class="at">api-key</span><span class="st">`</span> <span class="ot">=</span> api_key) <span class="sc">%&gt;%</span> </span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_error</span>(<span class="at">body =</span> nytimes_error_body) <span class="sc">%&gt;%</span> </span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_throttle</span>(<span class="dv">10</span> <span class="sc">/</span> <span class="dv">60</span>, <span class="at">realm =</span> <span class="st">&quot;https://api.nytimes.com/svc/books&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_perform</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">resp_body_json</span>()</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>drunk <span class="ot">&lt;-</span> <span class="fu">nytimes_books</span>(my_key, <span class="st">&quot;/reviews.json&quot;</span>, <span class="at">isbn =</span> <span class="st">&quot;0316453382&quot;</span>)</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>drunk<span class="sc">$</span>results[[<span class="dv">1</span>]]<span class="sc">$</span>summary</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;In “Drunk,” Edward Slingerland plays devil’s advocate for the pleasure and utility of Dionysian abandon.&quot;</span></span></code></pre></div>
+<p>To finish this up for a real package, you’d want to:</p>
+<ul>
+<li><p>Add explicit arguments and check that they have the correct type.</p></li>
+<li><p>Export and document the function.</p></li>
+<li><p>Convert the nested list into a more user-friendly data structure (probably a data frame with one row per review).</p></li>
+</ul>
+<p>You’d also want to provide some convenient way for the user to supply their own API key.</p>
+</div>
+<div id="user-supplied-key" class="section level3">
+<h3>User-supplied key</h3>
+<p>A good place to start is an environment variable, because environment variables are easy to set without typing anything in the console (which can get accidentally shared via your <code>.Rhistory</code>) and are easily set in automated processes. Then you’d write a function to retrieve the API key, returning a helpful message if it’s not found:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>get_api_key <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  key <span class="ot">&lt;-</span> <span class="fu">Sys.getenv</span>(<span class="st">&quot;NYTIMES_KEY&quot;</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">identical</span>(key, <span class="st">&quot;&quot;</span>)) {</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;No API key found, please supply with `api_key` argument or with NYTIMES_KEY env var&quot;</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  key</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Then you could modify <code>nytimes_books()</code> to use <code>get_api_key()</code> as the default value for <code>api_key</code>. Since the argument is now optional, we can move it to end of the argument list, since it’ll only be needed in exceptional circumstances.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>nytimes_books <span class="ot">&lt;-</span> <span class="cf">function</span>(path, ..., <span class="at">api_key =</span> <span class="fu">get_api_key</span>()) {</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>You can make this approach a little more user friendly by providing a helper that set’s the environment variable:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>set_api_key <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">key =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(key)) {</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    key <span class="ot">&lt;-</span> askpass<span class="sc">::</span><span class="fu">askpass</span>(<span class="st">&quot;Please enter your API key&quot;</span>)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.setenv</span>(<span class="st">&quot;NYTIMES_KEY&quot;</span> <span class="ot">=</span> key)</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Using askpass (or similar) here is good practice since you don’t want to encourage the user to type their secret key into the console, as mentioned above.</p>
+<p>It’s a good idea to extend <code>get_api_key()</code> to automatically use your encrypted key to make it easier to write tests:</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>get_api_key <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  key <span class="ot">&lt;-</span> <span class="fu">Sys.getenv</span>(<span class="st">&quot;NYTIMES_KEY&quot;</span>)</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">identical</span>(key, <span class="st">&quot;&quot;</span>)) {</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(key)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is_testing</span>()) {</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">testing_key</span>())</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;No API key found, please supply with `api_key` argument or with NYTIMES_KEY env var&quot;</span>) </span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>is_testing <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">identical</span>(<span class="fu">Sys.getenv</span>(<span class="st">&quot;TESTTHAT&quot;</span>), <span class="st">&quot;true&quot;</span>)</span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a>testing_key <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">secret_decrypt</span>(<span class="st">&quot;4Nx84VPa83dMt3X6bv0fNBlLbv3U4D1kHM76YisKEfpCarBm1UHJHARwJHCFXQSV&quot;</span>, <span class="st">&quot;HTTR2_KEY&quot;</span>)</span>
+<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+</div>
+<div id="github-gists-api" class="section level2">
+<h2>Github Gists API</h2>
+<p>Next we’ll take a look at an API that can make changes on behalf of a user, not just retrieve data: <a href="https://docs.github.com/en/rest/reference/gists">GitHub’s gist API</a>. This uses different HTTP methods to perform different actions, like creating, updating, and deleting gists. But before we can get to those, let’s handle authentication, rate-limiting, and errors.</p>
+<div id="authentication" class="section level3">
+<h3>Authentication</h3>
+<p>The easiest way to authenticate with a GitHub API is to use a personal access token. A token is an alternative to a username and password. You have one username + password per site; you can have one token per use case. This lets each use case have a minimal set of permissions, and you can easily revoke one token without affecting any other use case.</p>
+<p>I created a personal access token specifically for this vignette that can only access gists, and, as in the last example, stored an encrypted version in this vignette:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>token <span class="ot">&lt;-</span> <span class="fu">secret_decrypt</span>(<span class="st">&quot;Guz59woxKoIO_JVtp2IzU3mFIU3ULtaUEa8xvvpYUBdVthR8jhxzc3bMZFhA9HL-ZK6YZudOI6g&quot;</span>, <span class="st">&quot;HTTR2_KEY&quot;</span>)</span></code></pre></div>
+<p>If you want to run this vignette yourself, you’ll need to create a new token in your <a href="https://github.com/settings/tokens">GitHub settings</a>; just make sure it includes the “gist” scope. It’s also a good idea to give every token a descriptive name, that reminds you of its motivating use case.</p>
+<p>To authenticate a request with the token, we need to put it in the <code>Authorization</code> header with a <a href="https://docs.github.com/en/rest/overview/resources-in-the-rest-api#authentication">“token” prefix</a>:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.github.com/gists&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;token&quot;</span>, token))</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> <span class="fu">req_perform</span>()</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_response&gt;</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET https://api.github.com/gists</span></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Status: 200 OK</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: In memory (68160 bytes)</span></span></code></pre></div>
+<p>Because the authorization header usually contains secret information, httr2 automatically redacts it<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>req</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_request&gt;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET https://api.github.com/gists</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Headers:</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • Authorization: &#39;&lt;REDACTED&gt;&#39;</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: empty</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> <span class="fu">req_dry_run</span>()</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET /gists HTTP/1.1</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Host: api.github.com</span></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; User-Agent: httr2/0.1.0 r-curl/4.3.2 libcurl/7.64.1</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept: */*</span></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept-Encoding: deflate, gzip</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Authorization: &lt;REDACTED&gt;</span></span></code></pre></div>
+</div>
+<div id="errors-1" class="section level3">
+<h3>Errors</h3>
+<p>Once you’ve got authentication working, it’s always a good idea to work on errors next, since that will help you debug any failed requests. In my experience APIs rarely do a good job of documenting their errors, so you’ll often have to do a little experimentation. To add to the pain, in large APIs different endpoints often return different amounts of information in different forms. You’ll typically need to tackle your error handling iteratively, improving your code each time you encounter a new problem.</p>
+<p>While GitHub does <a href="https://docs.github.com/en/rest/overview/resources-in-the-rest-api#client-errors">document its errors</a>, I’m sufficiently distrustful that I still want to construct a deliberately malformed query and see what happens:</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="st">&quot;https://api.github.com/gists&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="at">since =</span> <span class="st">&quot;abcdef&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;token&quot;</span>, token)) <span class="sc">%&gt;%</span> </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error: HTTP 422 Unprocessable Entity.</span></span></code></pre></div>
+<p>As documented I get a 422 “Unprocessable Entity” error. But the response is rather different to documentation which suggests there should be a string <code>message</code> and a list of <code>errors</code>:</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">last_response</span>()</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>resp</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_response&gt;</span></span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET https://api.github.com/gists?since=abcdef</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Status: 422 Unprocessable Entity</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: In memory (156 bytes)</span></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>()</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $message</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Invalid since parameter: &#39;abcdef&#39;. Must be an ISO 8601 timestamp.&quot;</span></span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $documentation_url</span></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;https://docs.github.com/v3/gists/#parameters&quot;</span></span></code></pre></div>
+<p>I’ll proceed anyway, writing a function that extracts the data and formats it for presentation to the user:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>gist_error_body <span class="ot">&lt;-</span> <span class="cf">function</span>(resp) {</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  body <span class="ot">&lt;-</span> <span class="fu">resp_body_json</span>(resp)</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  message <span class="ot">&lt;-</span> body<span class="sc">$</span>message</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(body<span class="sc">$</span>documentation_url)) {</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    message <span class="ot">&lt;-</span> <span class="fu">c</span>(message, <span class="fu">paste0</span>(<span class="st">&quot;See docs at &lt;&quot;</span>, body<span class="sc">$</span>documentation_url, <span class="st">&quot;&gt;&quot;</span>))</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>  message</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="fu">gist_error_body</span>(resp)</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Invalid since parameter: &#39;abcdef&#39;. Must be an ISO 8601 timestamp.&quot;</span></span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [2] &quot;See docs at &lt;https://docs.github.com/v3/gists/#parameters&gt;&quot;</span></span></code></pre></div>
+<p>Now I can pass this function to the <code>body</code> argument of <code>req_error()</code> and it will be automatically included in the error when a request fails:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">request</span>(<span class="st">&quot;https://api.github.com/gists&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_query</span>(<span class="at">since =</span> <span class="st">&quot;yesterday&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;token&quot;</span>, token)) <span class="sc">%&gt;%</span> </span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_error</span>(<span class="at">body =</span> gist_error_body) <span class="sc">%&gt;%</span> </span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error: HTTP 422 Unprocessable Entity.</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; * Invalid since parameter: &#39;yesterday&#39;. Must be an ISO 8601 timestamp.</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; * See docs at &lt;https://docs.github.com/v3/gists/#parameters&gt;</span></span></code></pre></div>
+<p>Notice that each element of the character vector produced by <code>gh_error_body()</code> becomes a bullet in the resulting error.</p>
+</div>
+<div id="rate-limiting" class="section level3">
+<h3>Rate-limiting</h3>
+<p>While we’re thinking about errors, it’s useful to look at what happens if the requests are rate limited. Luckily, GitHub consistently uses response headers to provide information about the remaining <a href="https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting">rate limits</a>.</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> req <span class="sc">%&gt;%</span> <span class="fu">req_perform</span>() </span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>resp <span class="sc">%&gt;%</span> <span class="fu">resp_headers</span>(<span class="st">&quot;ratelimit&quot;</span>)</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_headers&gt;</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; x-ratelimit-limit: 5000</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; x-ratelimit-remaining: 4917</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; x-ratelimit-reset: 1632245083</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; x-ratelimit-used: 83</span></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; x-ratelimit-resource: core</span></span></code></pre></div>
+<p>We can teach httr2 about this so it can automatically wait for a reset if the rate limit is hit. We need to define two functions. The first tells us whether or not a response has a transient error, i.e. it’s worth waiting and trying again. For GitHub, when the rate limit is <a href="https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting">exceeded</a>, the response has a 403 status and a <code>X-RateLimit-Remaining: 0</code> header:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>gist_is_transient <span class="ot">&lt;-</span> <span class="cf">function</span>(resp) {</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">resp_status</span>(resp) <span class="sc">==</span> <span class="dv">403</span> <span class="sc">&amp;&amp;</span> </span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">resp_header</span>(resp, <span class="st">&quot;X-RateLimit-Remaining&quot;</span>) <span class="sc">==</span> <span class="st">&quot;0&quot;</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a><span class="fu">gist_is_transient</span>(resp)</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<p>Then we need a function tells how long to wait. GitHub tells us when the rate limit resets (as number of seconds since 1970-01-01) in the <code>X-RateLimit-Reset</code> header. To convert that to a number of seconds to wait we first convert it to a number (since HTTP headers are always strings), then subtract off the current time (in number of seconds since 1970-01-01):</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>gist_after <span class="ot">&lt;-</span> <span class="cf">function</span>(resp) {</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  time <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">resp_header</span>(resp, <span class="st">&quot;X-RateLimit-Reset&quot;</span>))</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  time <span class="sc">-</span> <span class="fu">unclass</span>(<span class="fu">Sys.time</span>())</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a><span class="fu">gist_after</span>(resp)</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 195.2782</span></span></code></pre></div>
+<p>We then pass functions to <code>req_retry()</code> so httr2 has all the information it needs to handle rate-limiting automatically:</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">request</span>(<span class="st">&quot;http://api.github.com&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_retry</span>(</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">is_transient =</span> gist_is_transient,</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">after =</span> gist_after,</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">max_seconds =</span> <span class="dv">60</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_request&gt;</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET http://api.github.com</span></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: empty</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Policies:</span></span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • retry_max_wait: 60</span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • retry_is_transient: a function</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; • retry_after: a function</span></span></code></pre></div>
+<p>You also need to supply either <code>max_tries</code> or <code>max_seconds</code> in order to activate <code>req_retry()</code>.</p>
+</div>
+<div id="wrapping-it-all-up" class="section level3">
+<h3>Wrapping it all up</h3>
+<p>Let’s wrap up everything we’ve learned so far into a single function that creates a request:</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>req_gist <span class="ot">&lt;-</span> <span class="cf">function</span>(token) {</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">request</span>(<span class="st">&quot;https://api.github.com/gists&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;token&quot;</span>, token)) <span class="sc">%&gt;%</span> </span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_error</span>(<span class="at">body =</span> gist_error_body) <span class="sc">%&gt;%</span> </span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">req_retry</span>(</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">is_transient =</span> gist_is_transient,</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">after =</span> gist_after</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Check it works:</span></span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a><span class="fu">req_gist</span>(token) <span class="sc">%&gt;%</span> </span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_response&gt;</span></span>
+<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; GET https://api.github.com/gists</span></span>
+<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Status: 200 OK</span></span>
+<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Body: In memory (68160 bytes)</span></span></code></pre></div>
+<p>We’ll use this as the basis to solve the next challenge: uploading a gist.</p>
+</div>
+<div id="sending-data" class="section level3">
+<h3>Sending data</h3>
+<p>To <a href="https://docs.github.com/en/rest/reference/gists#create-a-gist">create a gist</a> we need to change the method to <code>POST</code> and add a body that contains data encoded as JSON. httr2 provides one function that does both of these things: <code>req_body_json()</code>:</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">req_gist</span>(token) <span class="sc">%&gt;%</span> </span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_body_json</span>(<span class="fu">list</span>(</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">description =</span> <span class="st">&quot;This is my cool gist!&quot;</span>,</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">files =</span> <span class="fu">list</span>(<span class="at">test.R =</span> <span class="fu">list</span>(<span class="at">content =</span> <span class="st">&quot;print(&#39;Hi!&#39;)&quot;</span>)),</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">public =</span> <span class="cn">FALSE</span></span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  ))</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> <span class="fu">req_dry_run</span>()</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; POST /gists HTTP/1.1</span></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Host: api.github.com</span></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; User-Agent: httr2/0.1.0 r-curl/4.3.2 libcurl/7.64.1</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept: */*</span></span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept-Encoding: deflate, gzip</span></span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Authorization: &lt;REDACTED&gt;</span></span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Length: 100</span></span>
+<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; {&quot;description&quot;:&quot;This is my cool gist!&quot;,&quot;files&quot;:{&quot;test.R&quot;:{&quot;content&quot;:&quot;print(&#39;Hi!&#39;)&quot;}},&quot;public&quot;:false}</span></span></code></pre></div>
+<p>Depending on the API you’re wrapping, you might need to send data in a different way. <code>req_body_form()</code> and <code>req_body_multipart()</code> make it easier to encode data in two other common forms. If the API requires something different you can use <code>req_body_raw()</code>.</p>
+<p>Typically, the API will return some useful data about the resource you’ve just created. Here I’ll extract the gist ID so we can use it in the next examples, culminating with deleting the gist so I don’t end up with a bunch of duplicated gists 😃.</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>resp <span class="ot">&lt;-</span> req <span class="sc">%&gt;%</span> <span class="fu">req_perform</span>()</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>id <span class="ot">&lt;-</span> resp <span class="sc">%&gt;%</span> <span class="fu">resp_body_json</span>() <span class="sc">%&gt;%</span> .<span class="sc">$</span>id</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>id</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;4ab589b7eab852ba150c6aa43653b2d3&quot;</span></span></code></pre></div>
+</div>
+<div id="changing-a-gist" class="section level3">
+<h3>Changing a gist</h3>
+<p>Actually, that description wasn’t very true and I want to change it. To do so, I need to again send JSON encoded data, but this time I need to use the <code>PATCH</code> verb. So after adding the data to request, I use <code>req_method()</code> to override the default method:</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">req_gist</span>(token) <span class="sc">%&gt;%</span> </span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(id) <span class="sc">%&gt;%</span> </span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_body_json</span>(<span class="fu">list</span>(<span class="at">description =</span> <span class="st">&quot;This is a lame gist&quot;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_method</span>(<span class="st">&quot;PATCH&quot;</span>)</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> <span class="fu">req_dry_run</span>()</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; PATCH /gists/4ab589b7eab852ba150c6aa43653b2d3 HTTP/1.1</span></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Host: api.github.com</span></span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; User-Agent: httr2/0.1.0 r-curl/4.3.2 libcurl/7.64.1</span></span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept: */*</span></span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept-Encoding: deflate, gzip</span></span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Authorization: &lt;REDACTED&gt;</span></span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Type: application/json</span></span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Content-Length: 37</span></span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; {&quot;description&quot;:&quot;This is a lame gist&quot;}</span></span></code></pre></div>
+</div>
+<div id="deleting-a-gist" class="section level3">
+<h3>Deleting a gist</h3>
+<p>Deleting a gist is similar, except we don’t send any data, we just need to adjust the default method from <code>GET</code> to <code>DELETE</code>.</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>req <span class="ot">&lt;-</span> <span class="fu">req_gist</span>(token) <span class="sc">%&gt;%</span> </span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(id) <span class="sc">%&gt;%</span> </span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_method</span>(<span class="st">&quot;DELETE&quot;</span>)</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> <span class="fu">req_dry_run</span>()</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; DELETE /gists/4ab589b7eab852ba150c6aa43653b2d3 HTTP/1.1</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Host: api.github.com</span></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; User-Agent: httr2/0.1.0 r-curl/4.3.2 libcurl/7.64.1</span></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept: */*</span></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Accept-Encoding: deflate, gzip</span></span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Authorization: &lt;REDACTED&gt;</span></span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>req <span class="sc">%&gt;%</span> <span class="fu">req_perform</span>()</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_response&gt;</span></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; DELETE https://api.github.com/gists/4ab589b7eab852ba150c6aa43653b2d3</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Status: 204 No Content</span></span></code></pre></div>
+</div>
+</div>
+<div id="oauth" class="section level2">
+<h2>OAuth</h2>
+<p>If the API provides access to a website where the user already has an account (think Twitter, Instagram, Facebook, Google, GitHub, etc), it’s likely to use OAuth to allow you to authorise on behalf of the user. OAuth<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> is an authorisation framework that’s designed so that you don’t have to share your username and password with an app; instead the app asks for permission to use your account. You’ve almost certainly used this before on the web; it’s used in most cases where one website wants to use another website on your behalf.</p>
+<p>OAuth is a broad framework that’s has many many many different variants which makes it hard to provide generalisable advice. The following advice draws on my experience working with a number of OAuth using APIs, but don’t be surprised if you need to do something slightly different for the API you’re working with.</p>
+<div id="clients" class="section level3">
+<h3>Clients</h3>
+<p>The first step in working with any OAuth API is to create a client. This involves you registering for a developer account on the API’s website and creating a new OAuth app. The process varies from API to API, but at the end of it you’ll get a client id and in most cases a client secret.</p>
+<p>(You’ll definitely need this for testing your package, and you’ll probably also baked it into your package for the convenience of your users. Bundling the app is user friendly, but not always possible, particularly if rate limits are enforced on a per-app rather than per-user basis. You should always provide some way for the user to provide their own app.)</p>
+<p>If the API provides a way to authenticate your app without the client secret, you should leave it out of your package. But in most cases, you’ll need to include the secret in the package. You can use <code>obfuscate()</code> to hide the secret; this is not bulletproof<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a>, but in most cases it’ll be easier create a new client than try and steal yours. Additionally, it’s unusual for an OAuth client to be able to do anything in its own right, so even if someone does steal your secret there’s not much harm they can do with it.</p>
+<p>To obfuscate a secret, call <code>obfuscate()</code>:</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">obfuscate</span>(<span class="st">&quot;secret&quot;</span>)</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; obfuscated(&quot;Q_-_gmrmxIc11d6Jv_zjp2A3Zk0BWg&quot;)</span></span></code></pre></div>
+<p>Then use the client id from the website along with the obfuscated secret to create a client. The following code shows a GitHub OAuth app that I created specifically for this vignette:</p>
+<div class="sourceCode" id="cb47"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>client <span class="ot">&lt;-</span> <span class="fu">oauth_client</span>(</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">id =</span> <span class="st">&quot;28acfec0674bb3da9f38&quot;</span>,</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">secret =</span> <span class="fu">obfuscated</span>(<span class="st">&quot;J9iiGmyelHltyxqrHXW41ZZPZamyUNxSX1_uKnvPeinhhxET_7FfUs2X0LLKotXY2bpgOMoHRCo&quot;</span>),</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">token_url =</span> <span class="st">&quot;https://github.com/login/oauth/access_token&quot;</span>,</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">&quot;hadley-oauth-test&quot;</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<p>You need to figure out the <code>token_url</code> from the <a href="https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps">documentation</a>. I wish I could give good advice about how to find it 😞.</p>
+<p>Note that if you print the client the secret is automatically redacted:</p>
+<div class="sourceCode" id="cb48"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>client</span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;httr2_oauth_client&gt;</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   name: hadley-oauth-test</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   id: 28acfec0674bb3da9f38</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   secret: &lt;REDACTED&gt;</span></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   token_url: https://github.com/login/oauth/access_token</span></span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   auth: oauth_client_req_auth_body</span></span></code></pre></div>
+</div>
+<div id="flows" class="section level3">
+<h3>Flows</h3>
+<p>Once you have a client you need to use it with a <strong>flow</strong> in order to get a token. OAuth provides a number of different “flows”, the most common is the “authorisation code” flow, which is implemented by <code>req_oauth_auth_code()</code>. You can try it out by running this code:</p>
+<div class="sourceCode" id="cb49"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>token <span class="ot">&lt;-</span> <span class="fu">oauth_flow_auth_code</span>(client, <span class="at">auth_url =</span> <span class="st">&quot;https://github.com/login/oauth/authorize&quot;</span>)</span></code></pre></div>
+<p>This flow can’t be used inside a vignette because it’s designed specifically for interactive use: it will open a webpage on GitHub that requires you to interactively confirm it’s OK for this app to use your GitHub account.</p>
+<p>Other flows provide different ways of getting the token:</p>
+<ul>
+<li><p><code>req_oauth_client_credentials()</code> is used to allow the client to perform actions on its own behalf (instead of on behalf of some other user). This is typically need if you want to support <strong>service accounts</strong>, which are used in non-interactive environments.</p></li>
+<li><p><code>req_oauth_device()</code> uses the “device” flow which is designed for devices like TVs that don’t have an easy way to enter data. It also works well from the console.</p></li>
+<li><p><code>req_oauth_bearer_jwt()</code> uses a JWT signed by a private key.</p></li>
+<li><p><code>req_oauth_password()</code> exchanges a user name and password for an access token.</p></li>
+<li><p><code>req_oauth_refresh()</code> works directly with a refresh token that you already have. It’s useful for testing.</p></li>
+</ul>
+<p>There’s one historically important OAuth flow that httr2 doesn’t support: the implicit grant flow. This is now <a href="https://developer.okta.com/blog/2019/05/01/is-the-oauth-implicit-flow-dead">mostly deprecated</a> and was never a particularly good fit for native applications because it relies on a technique for returning the access token that only works inside a web browser.</p>
+<p>When wrapping an API, you’ll need to carefully read the documentation to figure out which flows are available. Typically you’ll want to use the auth code flow, but if it’s not available you’ll need to carefully consider the others. An additional wrinkle is that many APIs don’t implement the flow in exactly the same way as the spec. If your initial attempt doesn’t work, you’re going to need to do some sleuthing. This is going to be painful, but unfortunately there’s no way around it. I recommend using <code>with_verbosity()</code> so you can see exactly what httr2 is sending to the server. You’ll then need to carefully compare this to the API documentation and play “spot the difference”.</p>
+</div>
+<div id="tokens" class="section level3">
+<h3>Tokens</h3>
+<p>The point of a flow is to get a token. You can use <code>req_auth_bearer_token()</code> to authorise a request with the access token stored inside the token object:</p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="fu">request</span>(<span class="st">&quot;https://api.github.com/user&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_auth_bearer_token</span>(token<span class="sc">$</span>access_token) <span class="sc">%&gt;%</span> </span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">resp_body_json</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>  .<span class="sc">$</span>name</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Hadley Wickham&quot;</span></span></code></pre></div>
+<p>However, in most cases you won’t want to do this, but instead allow httr2 to manage the whole process, by switching from <code>oauth_flow_{name}</code> to <code>req_oauth_{name}</code>:</p>
+<div class="sourceCode" id="cb51"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">request</span>(<span class="st">&quot;https://api.github.com/user&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_oauth_auth_code</span>(client, <span class="at">auth_url =</span> <span class="st">&quot;https://github.com/login/oauth/authorize&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">req_perform</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">resp_body_json</span>()</span></code></pre></div>
+<p>This is important because most APIs provide only a short-lived access token that needs to be regularly refreshed using a longer-lived refresh token. httr2 will automatically refresh the token if its expired (i.e. its expiry date is in the past) or if the request errors with a 401 and there’s an <code>invalid_token</code> error in the <code>WWW-authenticate</code> header.</p>
+</div>
+<div id="caching" class="section level3">
+<h3>Caching</h3>
+<p>By default, <code>req_oauth_auth_code()</code> and friends will cache the token in memory, so that multiple requests in the same session all use the same token. In some cases, you may want to save the token so that it’s automatically used across sessions. This is easy to do (just set <code>cache_disk = TRUE</code> in <code>req_oauth_auth_code()</code>) but you need to carefully consider the consequences of saving the user’s credentials on disk.</p>
+<p>httr2 does the best it can to save these credentials securely. They are stored in a local cache directory (<code>rappdirs::user_cache_dir(&quot;httr2&quot;))</code> that should only be accessible to the current user, and are encrypted so they will be hard for any package other than httr2 to read. However, there’s no way to prevent other R code from using httr2 to access them, so if you do choose to cache tokens, you should inform the user and give them the ability to opt-out.</p>
+<p>You can see which clients have cached tokens by looking in the cache directory used by httr:</p>
+<div class="sourceCode" id="cb52"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dir</span>(rappdirs<span class="sc">::</span><span class="fu">user_cache_dir</span>(<span class="st">&quot;httr2&quot;</span>), <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;hadley-oauth-test/ae743e0fbd718c21f2cca632e77bd180-token.rds&quot;</span></span></code></pre></div>
+<p>httr2 automatically deletes any cached tokens that are older than 30 days whenever it’s loaded. This means that you’ll need to re-auth at least once a month, but prevents tokens for hanging around on disk long after you’ve forgotten you created them.</p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Again, it’s still possible to extract it with a little extra work, but httr2 tries to help you avoid revealing it by accident. httr2 protects you from yourself, not from someone deliberately trying to find the secret.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>Here I’ll only talk about OAuth 2.0 which is the only version in common use today. OAuth 1.0 is largely only of historical interest.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
+<li id="fn3"><p>It uses <code>secret_encrypt()</code> with a special encryption key that’s bundled with httr2.<a href="#fnref3" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
