@@ -1,6 +1,6 @@
 Package: httr2
 Title: Perform HTTP Requests and Process the Responses
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     c(person(given = "Hadley",
              family = "Wickham",
@@ -25,9 +25,9 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 RoxygenNote: 7.1.2
 NeedsCompilation: no
-Packaged: 2021-09-21 17:21:30 UTC; hadley
+Packaged: 2021-09-27 20:40:43 UTC; hadley
 Author: Hadley Wickham [aut, cre],
   RStudio [cph, fnd]
 Maintainer: Hadley Wickham <hadley@rstudio.com>
 Repository: CRAN
-Date/Publication: 2021-09-22 09:00:02 UTC
+Date/Publication: 2021-09-28 16:10:02 UTC
