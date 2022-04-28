@@ -1,7 +1,7 @@
 #' Control handling of HTTP errors
 #'
 #' `req_perform()` will automatically convert HTTP errors (i.e. any 4xx or 5xx
-#' status code) into R errors. Use `req_perform()` to either override the
+#' status code) into R errors. Use `req_error()` to either override the
 #' defaults, or extract additional information from the response that would
 #' be useful to expose to the user.
 #'
@@ -59,20 +59,15 @@ error_is_error <- function(req, resp) {
   req_policy_call(req, "error_is_error", list(resp), default = resp_is_error)
 }
 
-error_body <- function(req, resp) {
-  # TODO: revisit once rlang has better support for this
-  tryCatch(
+error_body <- function(req, resp, call = caller_env()) {
+  try_fetch(
     req_policy_call(req, "error_body", list(resp), default = NULL),
     error = function(cnd) {
-      msg <- c(
-        "",
-        "Additionally, req_error(body = ) failed with error:",
-        gsub("\n", "\n  ", conditionMessage(cnd))
+      abort(
+        "Failed to parse error body with method defined in req_error()",
+        parent = cnd,
+        call = call
       )
-      if (utils::packageVersion("rlang") >= "0.4.11.9001") {
-        names(msg)[[3]] <- " "
-      }
-      msg
     }
   )
 }

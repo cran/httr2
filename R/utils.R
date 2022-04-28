@@ -28,8 +28,10 @@ modify_list <- function(.x, ...) {
   if (!is_named(dots)) {
     abort("All components of ... must be named")
   }
-  .x[names(dots)] <- dots
-  out <- compact(.x)
+
+  out <- .x[!names(.x) %in% names(dots)]
+  out <- c(out, compact(dots))
+
   if (length(out) == 0) {
     names(out) <- NULL
   }
@@ -102,7 +104,7 @@ base64_url_rand <- function(bytes = 32) {
 
 #' Temporarily set verbosity for all requests
 #'
-#' `with_verbose()` is useful for debugging httr2 code buried deep inside
+#' `with_verbosity()` is useful for debugging httr2 code buried deep inside
 #' another package because it allows you to see exactly what's been sent
 #' and requested.
 #'
@@ -118,6 +120,21 @@ base64_url_rand <- function(bytes = 32) {
 with_verbosity <- function(code, verbosity = 1) {
   withr::local_options(httr2_verbosity = verbosity)
   code
+}
+
+httr2_verbosity <- function() {
+  x <- getOption("httr2_verbosity")
+  if (!is.null(x)) {
+    return(x)
+  }
+
+  # Hackish fallback for httr::with_verbose
+  old <- getOption("httr_config")
+  if (!is.null(old$options$debugfunction)) {
+    1
+  } else {
+    0
+  }
 }
 
 local_time <- function(x, tz = "UTC") {

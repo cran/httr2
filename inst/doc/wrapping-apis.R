@@ -362,7 +362,7 @@ id
 ## -----------------------------------------------------------------------------
 req <- req_gist(token) %>% 
   req_url_path_append(id) %>% 
-  req_body_json(list(description = "This is a lame gist")) %>% 
+  req_body_json(list(description = "This is a simple gist")) %>% 
   req_method("PATCH")
 req %>% req_dry_run()
 
