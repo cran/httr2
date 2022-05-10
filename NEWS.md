@@ -1,3 +1,9 @@
+# httr2 0.2.1
+
+* "Wrapping APIs" is now an article, not a vignette.
+
+* `req_template()` now appends the path instead of replacing it (@jchrom, #133)
+
 # httr2 0.2.0
 
 ## New features
@@ -34,6 +40,8 @@
 
 * `response()` now defaults `body` to `raw(0)` for consistency with real
   responses (#100).
+  
+* `req_stream()` no longer throws an error for non 200 http status codes (@DMerch, #137)
   
 # httr2 0.1.1
 
