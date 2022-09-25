@@ -7,7 +7,6 @@
 #' @inheritParams req_headers
 #' @param ... Name-value pairs. The name should be a valid curl option,
 #'   as found in [curl::curl_options()].
-#' @keywords internal
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
@@ -222,5 +221,5 @@ auth_flags <- function(x = "basic") {
     any = -17
   )
   idx <- arg_match0(x, names(constants), arg_nm = "auth", error_call = caller_env())
-  constants[[]]
+  constants[[idx]]
 }

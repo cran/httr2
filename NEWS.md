@@ -1,3 +1,24 @@
+# httr2 0.2.2
+
+* `curl_translate()` can now handle curl copied from Chrome developer tools
+  (@mgirlich, #161).
+
+* `req_oauth_*()` can now refresh OAuth tokens. One, two, or even more times! 
+  (@jennybc, #166)
+
+* `req_oauth_device()` can now work in non-interactive environments,
+  as intendend (@flahn, #170)
+
+* `req_oauth_refresh()` and `oauth_flow_refresh()` now use the envvar 
+  `HTTR2_REFRESH_TOKEN`, not `HTTR_REFRESH_TOKEN` (@jennybc, #169).
+
+* `req_proxy()` now uses the appropriate authentication option (@jl5000).
+
+* `req_url_query()` can now opt out of escaping with `I()` (@boshek, #152).
+
+* Can now print responses where content type is the empty string 
+  (@mgirlich, #163).
+
 # httr2 0.2.1
 
 * "Wrapping APIs" is now an article, not a vignette.

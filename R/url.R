@@ -2,7 +2,7 @@
 #'
 #' `url_parse()` parses a URL into its component pieces; `url_build()` does
 #' the reverse, converting a list of pieces into a string URL. See
-#' [rfc3986](https://tools.ietf.org/html/rfc3986) for details of parsing
+#' [rfc3986](https://www.rfc-editor.org/rfc/rfc3986) for details of parsing
 #' algorithm.
 #'
 #' @param url For `url_parse()` a string to parse into a URL;
@@ -182,7 +182,15 @@ query_build <- function(x) {
   x[is_double] <- map_chr(x[is_double], format, scientific = FALSE)
 
   names <- curl::curl_escape(names(x))
-  values <- map_chr(x, curl::curl_escape)
+  values <- map_chr(x, url_escape)
 
   paste0(names, "=", values, collapse = "&")
+}
+
+url_escape <- function(x) {
+  if (inherits(x, "AsIs")) {
+    x
+  } else {
+    curl::curl_escape(x)
+  }
 }
