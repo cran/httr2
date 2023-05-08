@@ -8,7 +8,7 @@ knitr::opts_chunk$set(
 library(httr2)
 
 ## -----------------------------------------------------------------------------
-req <- request("https://httpbin.org/get")
+req <- request(example_url())
 req
 
 ## -----------------------------------------------------------------------------
@@ -39,7 +39,7 @@ req %>%
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
-req <- request("https://httpbin.org/json")
+req <- request(example_url()) %>% req_url_path("/json")
 resp <- req %>% req_perform()
 resp
 
@@ -61,6 +61,11 @@ resp %>% resp_header("ConTEnT-LeNgTH")
 resp %>% resp_body_json() %>% str()
 
 ## ---- error = TRUE------------------------------------------------------------
-request("https://httpbin.org/status/404") %>% req_perform()
-request("https://httpbin.org/status/500") %>% req_perform()
+request(example_url()) %>% 
+  req_url_path("/status/404") %>% 
+  req_perform()
+
+request(example_url()) %>% 
+  req_url_path("/status/500") %>% 
+  req_perform()
 

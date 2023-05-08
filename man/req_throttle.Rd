@@ -25,9 +25,14 @@ Use \code{req_throttle()} to ensure that repeated calls to \code{\link[=req_perf
 exceed a specified rate.
 }
 \examples{
-# Ensure server will never recieve more than 10 requests a minute
-request("https://example.com") \%>\%
-  req_throttle(rate = 10 / 60)
+# Ensure we never send more than 30 requests a minute
+req <- request("https://example.com") \%>\%
+  req_throttle(rate = 30 / 60)
+
+resp <- req_perform(req)
+throttle_status()
+resp <- req_perform(req)
+throttle_status()
 }
 \seealso{
 \code{\link[=req_retry]{req_retry()}} for another way of handling rate-limited APIs.

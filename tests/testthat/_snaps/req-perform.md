@@ -1,3 +1,20 @@
+# curl and http errors become errors
+
+    Code
+      (expect_error(req_perform(req), class = "httr2_http_404"))
+    Output
+      <error/httr2_http_404>
+      Error in `req_perform()`:
+      ! HTTP 404 Not Found.
+
+---
+
+    Code
+      req_perform(req)
+    Condition
+      Error in `req_perform()`:
+      ! HTTP 429 Too Many Requests.
+
 # checks verbosity value
 
     Code

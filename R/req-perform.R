@@ -39,6 +39,7 @@
 #'
 #'   Use [with_verbosity()] to control the verbosity of requests that
 #'   you can't affect directly.
+#' @inheritParams rlang::args_error_context
 #' @returns If request is successful (i.e. the request was successfully
 #'   performed and a response with HTTP status code <400 was recieved), an HTTP
 #'   [response]; otherwise throws an error. Override this behaviour with
@@ -51,7 +52,8 @@ req_perform <- function(
       req,
       path = NULL,
       verbosity = NULL,
-      mock = getOption("httr2_mock", NULL)
+      mock = getOption("httr2_mock", NULL),
+      error_call = current_env()
   ) {
   check_request(req)
   verbosity <- verbosity %||% httr2_verbosity()
@@ -82,7 +84,9 @@ req_perform <- function(
 
   throttle_delay(req)
 
+  delay <- 0
   while(tries < max_tries && Sys.time() < deadline) {
+    sys_sleep(delay)
     n <- n + 1
 
     resp <- tryCatch(
@@ -95,17 +99,14 @@ req_perform <- function(
     if (is_error(resp)) {
       tries <- tries + 1
       delay <- retry_backoff(req, tries)
-      sys_sleep(delay)
     } else if (!reauth && resp_is_invalid_oauth_token(req, resp)) {
       reauth <- TRUE
       req <- auth_oauth_sign(req, TRUE)
       handle <- req_handle(req)
       delay <- 0
-      sys_sleep(delay)
     } else if (retry_is_transient(req, resp)) {
       tries <- tries + 1
       delay <- retry_after(req, resp, tries)
-      sys_sleep(delay)
     } else {
       # done
       break
@@ -118,7 +119,7 @@ req_perform <- function(
   if (is_error(resp)) {
     cnd_signal(resp)
   } else if (error_is_error(req, resp)) {
-    resp_abort(resp, error_body(req, resp))
+    resp_abort(resp, error_body(req, resp), call = error_call)
   } else {
     resp
   }
@@ -248,7 +249,8 @@ req_dry_run <- function(req, quiet = FALSE, redact_headers = TRUE) {
 #'   cat("Got ", length(x), " bytes\n", sep = "")
 #'   TRUE
 #' }
-#' resp <- request("http://httpbin.org/stream-bytes/100000") %>%
+#' resp <- request(example_url()) %>%
+#'   req_url_path("/stream-bytes/100000") %>%
 #'   req_stream(show_bytes, buffer_kb = 32)
 req_stream <- function(req, callback, timeout_sec = Inf, buffer_kb = 64) {
   check_request(req)
