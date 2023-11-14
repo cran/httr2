@@ -9,8 +9,8 @@ req_options(.req, ...)
 \arguments{
 \item{.req}{A \link{request}.}
 
-\item{...}{Name-value pairs. The name should be a valid curl option,
-as found in \code{\link[curl:curl_options]{curl::curl_options()}}.}
+\item{...}{<\code{\link[rlang:dyn-dots]{dynamic-dots}}> Name-value pairs. The name
+should be a valid curl option, as found in \code{\link[curl:curl_options]{curl::curl_options()}}.}
 }
 \value{
 A modified HTTP \link{request}.
@@ -26,6 +26,6 @@ httr2.
 # turn off SSL verification. This is generally a bad idea so httr2 doesn't
 # provide a convenient wrapper, but if you really know what you're doing
 # you can still access this libcurl option:
-req <- request("https://example.com") \%>\%
+req <- request("https://example.com") |>
   req_options(ssl_verifypeer = 0)
 }

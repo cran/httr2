@@ -14,17 +14,17 @@
 #' * `resp_header_exists()` returns `TRUE` or `FALSE`.
 #' @export
 #' @examples
-#' resp <- request("https://httr2.r-lib.org") %>% req_perform()
-#' resp %>% resp_headers()
-#' resp %>% resp_headers("x-")
+#' resp <- request("https://httr2.r-lib.org") |> req_perform()
+#' resp |> resp_headers()
+#' resp |> resp_headers("x-")
 #'
-#' resp %>% resp_header_exists("server")
-#' resp %>% resp_header("server")
+#' resp |> resp_header_exists("server")
+#' resp |> resp_header("server")
 #' # Headers are case insensitive
-#' resp %>% resp_header("SERVER")
+#' resp |> resp_header("SERVER")
 #'
 #' # Returns NULL if header doesn't exist
-#' resp %>% resp_header("this-header-doesnt-exist")
+#' resp |> resp_header("this-header-doesnt-exist")
 resp_headers <- function(resp, filter = NULL) {
   check_response(resp)
 
@@ -37,10 +37,11 @@ resp_headers <- function(resp, filter = NULL) {
 
 #' @export
 #' @param header Header name (case insensitive)
+#' @param default Default value to use if header doesn't exist.
 #' @rdname resp_headers
-resp_header <- function(resp, header) {
+resp_header <- function(resp, header, default = NULL) {
   check_response(resp)
-  resp$headers[[header]]
+  resp$headers[[header]] %||% default
 }
 
 #' @export
@@ -60,12 +61,12 @@ resp_header_exists <- function(resp, header) {
 #' @returns A `POSIXct` date-time.
 #' @examples
 #' resp <- response(headers = "Date: Wed, 01 Jan 2020 09:23:15 UTC")
-#' resp %>% resp_date()
+#' resp |> resp_date()
 #'
 #' # If server doesn't add header (unusual), you get the time the request
 #' # was created:
 #' resp <- response()
-#' resp %>% resp_date()
+#' resp |> resp_date()
 resp_date <- function(resp) {
   parse_http_date(resp_header(resp, "Date"))
 }
@@ -89,14 +90,14 @@ resp_date <- function(resp) {
 #'   `resp_encoding()` will return `"UTF-8"`.
 #' @inheritParams resp_headers
 #' @examples
-#' resp <- response(header = "Content-type: text/html; charset=utf-8")
-#' resp %>% resp_content_type()
-#' resp %>% resp_encoding()
+#' resp <- response(headers = "Content-type: text/html; charset=utf-8")
+#' resp |> resp_content_type()
+#' resp |> resp_encoding()
 #'
 #' # No Content-Type header
 #' resp <- response()
-#' resp %>% resp_content_type()
-#' resp %>% resp_encoding()
+#' resp |> resp_content_type()
+#' resp |> resp_encoding()
 resp_content_type <- function(resp) {
   if (resp_header_exists(resp, "content-type")) {
     parse_media(resp_header(resp, "content-type"))$type
@@ -128,10 +129,10 @@ resp_encoding <- function(resp) {
 #' @inheritParams resp_headers
 #' @examples
 #' resp <- response(headers = "Retry-After: 30")
-#' resp %>% resp_retry_after()
+#' resp |> resp_retry_after()
 #'
 #' resp <- response(headers = "Retry-After: Mon, 20 Sep 2025 21:44:05 UTC")
-#' resp %>% resp_retry_after()
+#' resp |> resp_retry_after()
 resp_retry_after <- function(resp) {
   # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
   val <- resp_header(resp, "Retry-After")
@@ -147,8 +148,7 @@ resp_retry_after <- function(resp) {
 
 #' Parse link URL from a response
 #'
-#' Parses URLs out of the the `Link` header as defined by
-#' [rfc8288](https://datatracker.ietf.org/doc/html/rfc8288).
+#' Parses URLs out of the the `Link` header as defined by `r rfc(8288)`.
 #'
 #' @export
 #' @inheritParams resp_headers

@@ -1,7 +1,10 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
+has_pipe <- getRversion() >= "4.1.0"
+
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  eval = has_pipe
 )
 
 ## ----setup--------------------------------------------------------------------
@@ -12,60 +15,63 @@ req <- request(example_url())
 req
 
 ## -----------------------------------------------------------------------------
-req %>% req_dry_run()
+req |> req_dry_run()
 
 ## -----------------------------------------------------------------------------
-req %>%
+port <- if (has_pipe) paste0("`", url_parse(example_url())$port, "`") else "e.g. `1234`"
+
+## -----------------------------------------------------------------------------
+req |>
   req_headers(
     Name = "Hadley", 
     `Shoe-Size` = "11", 
     Accept = "application/json"
-  ) %>% 
+  ) |> 
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
-req %>%
-  req_body_json(list(x = 1, y = "a")) %>% 
+req |>
+  req_body_json(list(x = 1, y = "a")) |> 
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
-req %>%
-  req_body_form(x = "1", y = "a") %>% 
+req |>
+  req_body_form(x = "1", y = "a") |> 
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
-req %>%
-  req_body_multipart(x = "1", y = "a") %>% 
+req |>
+  req_body_multipart(x = "1", y = "a") |> 
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
-req <- request(example_url()) %>% req_url_path("/json")
-resp <- req %>% req_perform()
+req <- request(example_url()) |> req_url_path("/json")
+resp <- req |> req_perform()
 resp
 
 ## -----------------------------------------------------------------------------
-resp %>% resp_raw()
+resp |> resp_raw()
 
 ## -----------------------------------------------------------------------------
-resp %>% resp_status()
-resp %>% resp_status_desc()
+resp |> resp_status()
+resp |> resp_status_desc()
 
 ## -----------------------------------------------------------------------------
-resp %>% resp_headers()
-resp %>% resp_header("Content-Length")
+resp |> resp_headers()
+resp |> resp_header("Content-Length")
 
 ## -----------------------------------------------------------------------------
-resp %>% resp_header("ConTEnT-LeNgTH")
+resp |> resp_header("ConTEnT-LeNgTH")
 
 ## -----------------------------------------------------------------------------
-resp %>% resp_body_json() %>% str()
+resp |> resp_body_json() |> str()
 
-## ---- error = TRUE------------------------------------------------------------
-request(example_url()) %>% 
-  req_url_path("/status/404") %>% 
+## ----error = TRUE-------------------------------------------------------------
+request(example_url()) |> 
+  req_url_path("/status/404") |> 
   req_perform()
 
-request(example_url()) %>% 
-  req_url_path("/status/500") %>% 
+request(example_url()) |> 
+  req_url_path("/status/500") |> 
   req_perform()
 

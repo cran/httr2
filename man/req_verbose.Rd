@@ -38,21 +38,21 @@ A modified HTTP \link{request}.
 different components of the HTTP requests and responses:
 \itemize{
 \item \verb{* } informative curl messages
-\item \verb{<-} request headers
-\item \verb{<<} request body
-\item \verb{->} response headers
-\item \verb{>>} response body
+\item \verb{->} request headers
+\item \verb{>>} request body
+\item \verb{<-} response headers
+\item \verb{<<} response body
 }
 }
 \examples{
 # Use `req_verbose()` to see the headers that are sent back and forth when
 # making a request
-resp <- request("https://httr2.r-lib.org") \%>\%
-  req_verbose() \%>\%
+resp <- request("https://httr2.r-lib.org") |>
+  req_verbose() |>
   req_perform()
 
 # Or use one of the convenient shortcuts:
-resp <- request("https://httr2.r-lib.org") \%>\%
+resp <- request("https://httr2.r-lib.org") |>
   req_perform(verbosity = 1)
 }
 \seealso{

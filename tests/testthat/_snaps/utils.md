@@ -3,24 +3,13 @@
     Code
       modify_list(x, a = 1, 2)
     Condition
-      Error in `modify_list()`:
-      ! All components of ... must be named
+      Error:
+      ! All components of `...` must be named.
 
-# can check arg types
+# can suppress progress bar
 
     Code
-      check_string(1, "x")
-    Condition
-      Error in `check_string()`:
-      ! x must be a string
-    Code
-      check_number("2", "x")
-    Condition
-      Error in `check_number()`:
-      ! x must be a number
-    Code
-      check_number(NA_real_, "x")
-    Condition
-      Error in `check_number()`:
-      ! x must be a number
+      sys_sleep(0.1, "for test")
+    Message
+      > Waiting 1s for test
 

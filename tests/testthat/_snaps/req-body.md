@@ -1,13 +1,17 @@
-# req_body_form() and req_body_multipart() accept list() with warning
+# errors if file doesn't exist
 
     Code
-      req1 <- req %>% req_body_form(list(x = "x"))
+      req_body_file(request_test(), "doesntexist", type = "text/plain")
     Condition
-      Warning in `req_body_form()`:
-      This function longers takes a list, instead supply named arguments in ...
+      Error in `req_body_file()`:
+      ! `path` ('doesntexist') does not exist.
+
+# non-json type errors
+
     Code
-      req2 <- req %>% req_body_multipart(list(x = "x"))
+      req_body_json(request_test(), mtcars, type = "application/xml")
     Condition
-      Warning in `req_body_multipart()`:
-      This function longers takes a list, instead supply named arguments in ...
+      Error in `req_body_json()`:
+      ! Unexpected content type "application/xml".
+      * Expecting type "application/json" or suffix "json".
 

@@ -6,10 +6,12 @@
 #' * `resp_body_json()` returns parsed JSON.
 #' * `resp_body_html()` returns parsed HTML.
 #' * `resp_body_xml()` returns parsed XML.
+#' * `resp_has_body()` returns `TRUE` if the response has a body.
 #'
 #' `resp_body_json()` and `resp_body_xml()` check that the content-type header
 #' is correct; if the server returns an incorrect type you can suppress the
-#' check with `check_type = FALSE`.
+#' check with `check_type = FALSE`. These two functions also cache the parsed
+#' object so the second and subsequent calls are low-cost.
 #'
 #' @param resp A response object.
 #' @returns
@@ -19,24 +21,37 @@
 #' * `resp_body_html()` and `resp_body_xml()` return an `xml2::xml_document`
 #' @export
 #' @examples
-#' resp <- request("https://httr2.r-lib.org") %>% req_perform()
+#' resp <- request("https://httr2.r-lib.org") |> req_perform()
 #' resp
 #'
-#' resp %>% resp_body_raw()
-#' resp %>% resp_body_string()
+#' resp |> resp_has_body()
+#' resp |> resp_body_raw()
+#' resp |> resp_body_string()
 #'
 #' if (requireNamespace("xml2", quietly = TRUE)) {
-#'   resp %>% resp_body_html()
+#'   resp |> resp_body_html()
 #' }
 resp_body_raw <- function(resp) {
   check_response(resp)
 
-  if (is_path(resp$body)) {
+  if (!resp_has_body(resp)) {
+    cli::cli_abort("Can't retrieve empty body.")
+  } else if (is_path(resp$body)) {
     readBin(resp$body, "raw", file.size(resp$body))
-  } else if (length(resp$body) == 0) {
-    abort("Can not retrieve empty body")
   } else {
     resp$body
+  }
+}
+
+#' @rdname resp_body_raw
+#' @export
+resp_has_body <- function(resp) {
+  check_response(resp)
+
+  if (is_path(resp$body)) {
+    file.size(resp$body) > 0
+  } else {
+    length(resp$body) > 0
   }
 }
 
@@ -65,14 +80,22 @@ resp_body_string <- function(resp, encoding = NULL) {
 resp_body_json <- function(resp, check_type = TRUE, simplifyVector = FALSE, ...) {
   check_response(resp)
   check_installed("jsonlite")
-  check_content_type(resp,
-    types = "application/json",
-    suffix = "+json",
+
+  key <- body_cache_key("json", simplifyVector = simplifyVector, ...)
+  if (env_has(resp$cache, key)) {
+    return(resp$cache[[key]])
+  }
+
+  resp_check_content_type(
+    resp,
+    valid_types = "application/json",
+    valid_suffix = "json",
     check_type = check_type
   )
 
   text <- resp_body_string(resp, "UTF-8")
-  jsonlite::fromJSON(text, simplifyVector = simplifyVector, ...)
+  resp$cache[[key]] <- jsonlite::fromJSON(text, simplifyVector = simplifyVector, ...)
+  resp$cache[[key]]
 }
 
 #' @rdname resp_body_raw
@@ -80,9 +103,11 @@ resp_body_json <- function(resp, check_type = TRUE, simplifyVector = FALSE, ...)
 resp_body_html <- function(resp, check_type = TRUE, ...) {
   check_response(resp)
   check_installed("xml2")
-  check_content_type(resp,
-    types = c("text/html", "application/xhtml+xml"),
-    check_type = check_type)
+  resp_check_content_type(
+    resp,
+    valid_types = c("text/html", "application/xhtml+xml"),
+    check_type = check_type
+  )
 
   xml2::read_html(resp$body, ...)
 }
@@ -92,48 +117,24 @@ resp_body_html <- function(resp, check_type = TRUE, ...) {
 resp_body_xml <- function(resp, check_type = TRUE, ...) {
   check_response(resp)
   check_installed("xml2")
-  check_content_type(resp,
-    types = c("application/xml", "text/xml"),
-    suffix = "+xml",
+
+  key <- body_cache_key("xml", ...)
+  if (env_has(resp$cache, key)) {
+    return(resp$cache[[key]])
+  }
+
+  resp_check_content_type(
+    resp,
+    valid_types = c("application/xml", "text/xml"),
+    valid_suffix = "xml",
     check_type = check_type
   )
 
-  xml2::read_xml(resp$body, ...)
+  resp$cache[[key]] <- xml2::read_xml(resp$body, ...)
+  resp$cache[[key]]
 }
 
-# Helpers -----------------------------------------------------------------
-
-check_content_type <- function(
-    resp,
-    types,
-    suffix = NULL,
-    check_type = TRUE) {
-
-  if (!check_type) {
-    return()
-  }
-
-  content_type <- resp_content_type(resp)
-  if (content_type %in% types) {
-    return()
-  }
-
-  # https://datatracker.ietf.org/doc/html/rfc6838#section-4.2.8
-  if (!is.null(suffix) && endsWith(content_type, suffix)) {
-    return()
-  }
-
-  if (length(types) > 1) {
-    type <- paste0("one of ", paste0("'", types, "'", collapse = ", "))
-  } else {
-    type <- paste0("'", types, "'")
-  }
-
-  abort(c(
-    glue("Unexpected content type '{content_type}'"),
-    glue("Expecting {type}"),
-    if (!is.null(suffix)) glue("Or suffix '{suffix}'"),
-    i = "Override check with `check_type = FALSE`"
-  ))
+body_cache_key <- function(prefix, ...) {
+  key <- hash(list(...))
+  paste0(prefix, "-", substr(key, 1, 10))
 }
-

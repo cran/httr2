@@ -22,20 +22,20 @@
 #' httpbin <- request(example_url())
 #'
 #' # You can supply template parameters in `...`
-#' httpbin %>% req_template("GET /bytes/{n}", n = 100)
+#' httpbin |> req_template("GET /bytes/{n}", n = 100)
 #'
 #' # or you retrieve from the current environment
 #' n <- 200
-#' httpbin %>% req_template("GET /bytes/{n}")
+#' httpbin |> req_template("GET /bytes/{n}")
 #'
 #' # Existing path is preserved:
-#' httpbin_test <- request(example_url()) %>% req_url_path("/test")
+#' httpbin_test <- request(example_url()) |> req_url_path("/test")
 #' name <- "id"
 #' value <- "a3fWa"
-#' httpbin_test %>% req_template("GET /set/{name}/{value}")
+#' httpbin_test |> req_template("GET /set/{name}/{value}")
 req_template <- function(req, template, ..., .env = parent.frame()) {
   check_request(req)
-  check_string(template, "`template`")
+  check_string(template)
 
   pieces <- strsplit(template, " ")[[1]]
   if (length(pieces) == 1) {
@@ -44,25 +44,28 @@ req_template <- function(req, template, ..., .env = parent.frame()) {
     req <- req_method(req, pieces[[1]])
     template <- pieces[[2]]
   } else {
-    abort(c(
-      "Can't parse template `template`",
-      i = "Should have form like 'GET /a/b/c' or 'a/b/c/'"
+    cli::cli_abort(c(
+      "Can't parse template {.arg template}.",
+      i = "Should have form like 'GET /a/b/c' or 'a/b/c/'."
     ))
   }
 
   dots <- list2(...)
   if (length(dots) > 0 && !is_named(dots)) {
-    abort("All elements of ... must be named")
+    cli::cli_abort("All elements of {.arg ...} must be named.")
   }
 
   path <- template_process(template, dots, .env)
   req_url_path_append(req, path)
 }
 
-template_process <- function(template, dots = list(), env = parent.frame()) {
+template_process <- function(template,
+                             dots = list(),
+                             env = parent.frame(),
+                             error_call = caller_env()) {
   type <- template_type(template)
   vars <- template_vars(template, type)
-  vals <- map_chr(vars, template_val, dots = dots, env = env)
+  vals <- map_chr(vars, template_val, dots = dots, env = env, error_call = error_call)
 
   for (i in seq_along(vars)) {
     pattern <- switch(type,
@@ -74,17 +77,23 @@ template_process <- function(template, dots = list(), env = parent.frame()) {
   template
 }
 
-template_val <- function(name, dots, env) {
+template_val <- function(name, dots, env, error_call = caller_env()) {
   if (has_name(dots, name)) {
     val <- dots[[name]]
   } else if (env_has(env, name, inherit = TRUE)) {
     val <- env_get(env, name, inherit = TRUE)
   } else {
-    abort(glue("Can't find template variable '{name}'"))
+    cli::cli_abort(
+      "Can't find template variable {.str {name}}.",
+      call = error_call
+    )
   }
 
   if (!is.atomic(val) || length(val) != 1) {
-    abort(glue("Template variable '{name}' is not a simple scalar value"))
+    cli::cli_abort(
+      "Template variable {.str {name}} is not a simple scalar value.",
+      call = error_call
+    )
   }
   as.character(val)
 }

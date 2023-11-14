@@ -8,9 +8,9 @@
 #'
 #' @inheritParams req_perform
 #' @param url New URL; completely replaces existing.
-#' @param ... For `req_url_query()`: Name-value pairs that provide query
-#'   parameters. Each value must be either a length-1 atomic vector
-#'   (which is automatically escaped) or `NULL` (which is silently dropped).
+#' @param ... For `req_url_query()`: <[`dynamic-dots`][rlang::dyn-dots]>
+#'   Name-value pairs that define query parameters. Each value must be either
+#'   an atomic vector or `NULL` (which removes the corresponding parameters).
 #'   If you want to opt out of escaping, wrap strings in `I()`.
 #'
 #'   For `req_url_path()` and `req_url_path_append()`: A sequence of path
@@ -21,18 +21,27 @@
 #' req <- request("http://example.com")
 #'
 #' # Change url components
-#' req %>%
-#'   req_url_path_append("a") %>%
-#'   req_url_path_append("b") %>%
-#'   req_url_path_append("search.html") %>%
+#' req |>
+#'   req_url_path_append("a") |>
+#'   req_url_path_append("b") |>
+#'   req_url_path_append("search.html") |>
 #'   req_url_query(q = "the cool ice")
 #'
 #' # Change complete url
-#' req %>%
+#' req |>
 #'   req_url("http://google.com")
+#'
+#' # Use .multi to control what happens with vector parameters:
+#' req |> req_url_query(id = 100:105, .multi = "comma")
+#' req |> req_url_query(id = 100:105, .multi = "explode")
+#'
+#' # If you have query parameters in a list, use !!!
+#' params <- list(a = "1", b = "2")
+#' req |>
+#'   req_url_query(!!!params, c = "3")
 req_url <- function(req, url) {
   check_request(req)
-  check_string(url, "`url`")
+  check_string(url)
 
   req$url <- url
   req
@@ -40,12 +49,25 @@ req_url <- function(req, url) {
 
 #' @export
 #' @rdname req_url
-req_url_query <- function(.req, ...) {
+#' @param .multi Controls what happens when an element of `...` is a vector
+#'   containing multiple values:
+#'
+#'   * `"error"`, the default, throws an error.
+#'   * `"comma"`, separates values with a `,`, e.g. `?x=1,2`.
+#'   * `"pipe"`, separates values with a `|`, e.g. `?x=1|2`.
+#'   * `"explode"`, turns each element into its own parameter, e.g. `?x=1&x=2`.
+#'
+#'   If none of these functions work, you can alternatively supply a function
+#'   that takes a character vector and returns a string.
+req_url_query <- function(.req,
+                          ...,
+                          .multi = c("error", "comma", "pipe", "explode")) {
   check_request(.req)
 
-  url <- url_parse(.req$url)
-  url$query <- modify_list(url$query, ...)
+  dots <- multi_dots(..., .multi = .multi)
 
+  url <- url_parse(.req$url)
+  url$query <- modify_list(url$query, !!!dots)
   req_url(.req, url_build(url))
 }
 
@@ -73,9 +95,6 @@ req_url_path_append <- function(req, ...) {
 dots_to_path <- function(...) {
   path <- paste(c(...), collapse = "/")
   # Ensure we don't add duplicate /s
-  if (path != "" && !grepl("^/", path)) {
-    path <- paste0("/", path)
-  }
-
-  path
+  # NB: also keeps "" unchanged.
+  sub("^([^/])", "/\\1", path)
 }

@@ -6,8 +6,8 @@
 #' number of requests to make with `max_tries` or the total amount of time
 #' to spend with `max_seconds`. Then `req_perform()` will retry if:
 #'
-#' * The either the HTTP request or HTTP response doesn't complete successfully
-#'   leading to an error from curl, the lower-level library that httr uses to
+#' * Either the HTTP request or HTTP response doesn't complete successfully
+#'   leading to an error from curl, the lower-level library that httr2 uses to
 #'   perform HTTP request. This occurs, for example, if your wifi is down.
 #'
 #' * The error is "transient", i.e. it's an HTTP error that can be resolved
@@ -51,11 +51,11 @@
 #'   the limits in the response.
 #' @examples
 #' # google APIs assume that a 500 is also a transient error
-#' request("http://google.com") %>%
-#'   req_retry(is_transient = ~ resp_status(.x) %in% c(429, 500, 503))
+#' request("http://google.com") |>
+#'   req_retry(is_transient = \(resp) resp_status(resp) %in% c(429, 500, 503))
 #'
 #' # use a constant 10s delay after every failure
-#' request("http://example.com") %>%
+#' request("http://example.com") |>
 #'   req_retry(backoff = ~ 10)
 #'
 #' # When rate-limited, GitHub's API returns a 403 with
@@ -69,7 +69,7 @@
 #'   time <- as.numeric(resp_header(resp, "X-RateLimit-Reset"))
 #'   time - unclass(Sys.time())
 #' }
-#' request("http://api.github.com") %>%
+#' request("http://api.github.com") |>
 #'   req_retry(
 #'     is_transient = github_is_transient,
 #'     after = github_after

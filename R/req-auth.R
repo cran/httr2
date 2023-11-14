@@ -12,25 +12,25 @@
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
-#' req <- request("http://example.com") %>% req_auth_basic("hadley", "SECRET")
+#' req <- request("http://example.com") |> req_auth_basic("hadley", "SECRET")
 #' req
-#' req %>% req_dry_run()
+#' req |> req_dry_run()
 #'
 #' # httr2 does its best to redact the Authorization header so that you don't
 #' # accidentally reveal confidential data. Use `redact_headers` to reveal it:
 #' print(req, redact_headers = FALSE)
-#' req %>% req_dry_run(redact_headers = FALSE)
+#' req |> req_dry_run(redact_headers = FALSE)
 #'
 #' # We do this because the authorization header is not encrypted and the
 #' # so password can easily be discovered:
 #' rawToChar(jsonlite::base64_dec("aGFkbGV5OlNFQ1JFVA=="))
 req_auth_basic <- function(req, username, password = NULL) {
   check_request(req)
-  check_string(username, "`username`")
+  check_string(username)
   password <- check_password(password)
 
   username_password <- openssl::base64_encode(paste0(username, ":", password))
-  req_headers(req, Authorization = paste0("Basic ", username_password))
+  req_headers(req, Authorization = paste0("Basic ", username_password), .redact = "Authorization")
 }
 
 #' Authenticate request with bearer token
@@ -41,14 +41,14 @@ req_auth_basic <- function(req, username, password = NULL) {
 #' (like the various OAuth 2.0 flows), but you are sometimes given then
 #' directly.
 #'
-#' @seealso [RFC750](https://datatracker.ietf.org/doc/html/rfc6750)
-#'   The OAuth 2.0 Authorization Framework: Bearer Token Usage
+#' @seealso See `r rfc(6750)` for more details about bearer token usage
+#'   with OAuth 2.0.
 #' @inheritParams req_perform
 #' @param token A bearer token
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
-#' req <- request("http://example.com") %>% req_auth_bearer_token("sdaljsdf093lkfs")
+#' req <- request("http://example.com") |> req_auth_bearer_token("sdaljsdf093lkfs")
 #' req
 #'
 #' # httr2 does its best to redact the Authorization header so that you don't
@@ -56,6 +56,6 @@ req_auth_basic <- function(req, username, password = NULL) {
 #' print(req, redact_headers = FALSE)
 req_auth_bearer_token <- function(req, token) {
   check_request(req)
-  check_string(token, "`token`")
-  req_headers(req, Authorization = paste("Bearer", token))
+  check_string(token)
+  req_headers(req, Authorization = paste("Bearer", token), .redact = "Authorization")
 }

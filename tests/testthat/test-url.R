@@ -22,6 +22,7 @@ test_that("can round trip urls", {
     "http://google.com/path?a=1&b=2",
     "http://google.com:80/path?a=1&b=2",
     "http://google.com:80/path?a=1&b=2#frag",
+    "http://google.com:80/path?a=1&b=2&c=%7B1%7B2%7D3%7D#frag",
     "http://user@google.com:80/path?a=1&b=2",
     "http://user:pass@google.com:80/path?a=1&b=2",
     "svn+ssh://my.svn.server/repo/trunk"
@@ -32,8 +33,22 @@ test_that("can round trip urls", {
 
 test_that("can print all url details", {
   expect_snapshot(
-    url_parse("http://user:pass@example.com:80/path?a=1&b=2#frag")
+    url_parse("http://user:pass@example.com:80/path?a=1&b=2&c={1{2}3}#frag")
   )
+})
+
+test_that("ensures path always starts with /", {
+  expect_equal(
+    url_modify("https://example.com/abc", path = "def"),
+    "https://example.com/def"
+  )
+})
+
+test_that("password also requires username", {
+  url <- url_parse("http://username:pwd@example.com")
+  url$username <- NULL
+  expect_snapshot(url_build(url), error = TRUE)
+
 })
 
 # query -------------------------------------------------------------------
@@ -49,10 +64,37 @@ test_that("empty queries become NULL", {
   expect_equal(query_parse(""), NULL)
 })
 
-test_that("doubles never use scientific notation", {
-  expect_equal(query_build(list(x = 1e9)), "x=1000000000")
+test_that("validates inputs", {
+  expect_snapshot(error = TRUE, {
+    query_build(1:3)
+    query_build(list(x = 1:2, y = 1:3))
+  })
+})
+
+# format_query_param ------------------------------------------------------
+
+test_that("handles all atomic vectors", {
+  expect_equal(format_query_param(NA), "NA")
+  expect_equal(format_query_param(TRUE), "TRUE")
+  expect_equal(format_query_param(1L), "1")
+  expect_equal(format_query_param(1.3), "1.3")
+  expect_equal(format_query_param("x"), "x")
+  expect_equal(format_query_param(" "), "%20")
+})
+
+test_that("doesn't add extra spaces", {
+  expect_equal(format_query_param(c(1, 1000)), c("1", "1000"))
+  expect_equal(format_query_param(c("a", "bcdef")), c("a", "bcdef"))
+})
+
+test_that("formats numbers nicely", {
+  expect_equal(format_query_param(1e9), "1000000000")
 })
 
 test_that("can opt out of escaping", {
-  expect_equal(query_build(list(x = I(","))), "x=,")
+  expect_equal(format_query_param(I(",")), ",")
+})
+
+test_that("can't opt out of escaping non strings", {
+  expect_snapshot(format_query_param(I(1)), error = TRUE)
 })

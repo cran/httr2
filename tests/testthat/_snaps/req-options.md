@@ -1,3 +1,16 @@
+# validates inputs
+
+    Code
+      request_test() %>% req_timeout("x")
+    Condition
+      Error in `req_timeout()`:
+      ! `seconds` must be a number, not the string "x".
+    Code
+      request_test() %>% req_timeout(0)
+    Condition
+      Error in `req_timeout()`:
+      ! `seconds` must be >1 ms.
+
 # can request verbose record of request
 
     -> POST /post HTTP/1.1
@@ -15,7 +28,7 @@
       req %>% req_proxy(port = "abc")
     Condition
       Error in `req_proxy()`:
-      ! `port` must be a number
+      ! `port` must be a whole number or `NULL`, not the string "abc".
     Code
       req %>% req_proxy("abc", auth = "bsc")
     Condition

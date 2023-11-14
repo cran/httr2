@@ -1,9 +1,14 @@
 #' Create a new HTTP response
 #'
+#' @description
 #' Generally, you should not need to call this function directly; you'll
 #' get a real HTTP response by calling [req_perform()] and friends. This
 #' function is provided primarily for testing, and a place to describe
 #' the key components of a response.
+#'
+#' `response()` creates a generic response; `response_json()` creates a
+#' response with a JSON body, automatically adding the correct Content-Type
+#' header.
 #'
 #' @keywords internal
 #' @param status_code HTTP status code. Must be a single integer.
@@ -13,6 +18,7 @@
 #' @param headers HTTP headers. Can be supplied as a raw or character vector
 #'   which will be parsed using the standard rules, or a named list.
 #' @param body Response, if any, contained in the response body.
+#'   For `response_json()`, a R data structure to serialize to JSON.
 #' @returns An HTTP response: an S3 list with class `httr2_response`.
 #' @export
 #' @examples
@@ -25,6 +31,10 @@ response <- function(status_code = 200,
                      headers = list(),
                      body = raw()) {
 
+  check_number_whole(status_code, min = 100, max = 700)
+  check_string(url)
+  check_string(method)
+
   headers <- as_headers(headers)
 
   new_response(
@@ -36,15 +46,44 @@ response <- function(status_code = 200,
   )
 }
 
-new_response <- function(method, url, status_code, headers, body) {
-  check_string(method, "method")
-  check_string(url, "url")
-  check_number(status_code, "status_code")
+#' @export
+#' @rdname response
+response_json <- function(status_code = 200,
+                     url = "https://example.com",
+                     method = "GET",
+                     headers = list(),
+                     body = list()) {
 
   headers <- as_headers(headers)
+  headers$`Content-Type` <- "application/json"
+
+  body <- charToRaw(jsonlite::toJSON(body, auto_unbox = TRUE))
+
+  new_response(
+    method = method,
+    url = url,
+    status_code = as.integer(status_code),
+    headers = headers,
+    body = body
+  )
+}
+
+new_response <- function(method,
+                         url,
+                         status_code,
+                         headers,
+                         body,
+                         request = NULL,
+                         error_call = caller_env()) {
+  check_string(method, call = error_call)
+  check_string(url, call = error_call)
+  check_number_whole(status_code, call = error_call)
+  check_request(request, allow_null = TRUE)
+
+  headers <- as_headers(headers, error_call = error_call)
   # ensure we always have a date field
   if (!"date" %in% tolower(names(headers))) {
-    headers$Date <- http_date()
+    headers$Date <- "Wed, 01 Jan 2020 00:00:00 UTC"
   }
 
   structure(
@@ -53,7 +92,9 @@ new_response <- function(method, url, status_code, headers, body) {
       url = url,
       status_code = status_code,
       headers = headers,
-      body = body
+      body = body,
+      request = request,
+      cache = new_environment()
     ),
     class = "httr2_response"
   )
@@ -70,11 +111,11 @@ print.httr2_response <- function(x,...) {
   }
 
   body <- x$body
-  if (is_path(body)) {
-    cli::cli_text("{.field Body}: On disk {.path body}")
-  } else if (length(body) == 0) {
-    cli::cli_text("{.field Body}: Empty")
-  } else if (length(body) > 0) {
+  if (!resp_has_body(x)) {
+    cli::cli_text("{.field Body}: None")
+  } else if (is_path(body)) {
+    cli::cli_text("{.field Body}: On disk {.path {body}} ({file.size(body)} bytes)")
+  } else {
     cli::cli_text("{.field Body}: In memory ({length(body)} bytes)")
   }
 
@@ -92,10 +133,10 @@ print.httr2_response <- function(x,...) {
 #' @returns `resp` (invisibly).
 #' @export
 #' @examples
-#' resp <- request(example_url()) %>%
-#'   req_url_path("/json") %>%
+#' resp <- request(example_url()) |>
+#'   req_url_path("/json") |>
 #'   req_perform()
-#' resp %>% resp_raw()
+#' resp |> resp_raw()
 resp_raw <- function(resp) {
   cli::cat_line("HTTP/1.1 ", resp$status_code, " ", resp_status_desc(resp))
   cli::cat_line(cli::style_bold(names(resp$headers)), ": ", resp$headers)
@@ -110,9 +151,17 @@ resp_raw <- function(resp) {
 is_response <- function(x) {
   inherits(x, "httr2_response")
 }
-check_response <- function(req) {
-  if (is_response(req)) {
-    return()
+
+check_response <- function(resp, arg = caller_arg(resp), call = caller_env()) {
+  if (!missing(resp) && is_response(resp)) {
+    return(invisible(NULL))
   }
-  abort("`resp` must be an HTTP response object")
+
+  stop_input_type(
+    resp,
+    "an HTTP response object",
+    allow_null = FALSE,
+    arg = arg,
+    call = call
+  )
 }

@@ -15,12 +15,26 @@
 #' [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching).
 #'
 #' @inheritParams req_perform
-#' @param path Path to cache directory
+#' @param path Path to cache directory.
+#'
+#'   httr2 doesn't provide helpers to manage the cache, but if you want to
+#'   empty it, you can use something like
+#'   `unlink(dir(cache_path, full.names = TRUE))`.
 #' @param use_on_error If the request errors, and there's a cache response,
 #'   should `req_perform()` return that instead of generating an error?
 #' @param debug When `TRUE` will emit useful messages telling you about
 #'   cache hits and misses. This can be helpful to understand whether or
 #'   not caching is actually doing anything for your use case.
+#' @param max_n,max_age,max_size Automatically prune the cache by specifying
+#'   one or more of:
+#'
+#'   * `max_age`: to delete files older than this number of seconds.
+#'   * `max_n`: to delete files (from oldest to newest) to preserve at
+#'      most this many files.
+#'   * `max_size`: to delete files (from oldest to newest) to preserve at
+#'      most this many bytes.
+#'
+#'   The cache pruning is performed at most once per minute.
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
@@ -30,26 +44,38 @@
 #'   "master/inst/extdata/penguins.csv"
 #' )
 #' # Here I set debug = TRUE so you can see what's happening
-#' req <- request(url) %>% req_cache(tempdir(), debug = TRUE)
+#' req <- request(url) |> req_cache(tempdir(), debug = TRUE)
 #'
 #' # First request downloads the data
-#' resp <- req %>% req_perform()
+#' resp <- req |> req_perform()
 #'
 #' # Second request retrieves it from the cache
-#' resp <- req %>% req_perform()
-req_cache <- function(req, path, use_on_error = FALSE, debug = FALSE) {
+#' resp <- req |> req_perform()
+req_cache <- function(req,
+                      path,
+                      use_on_error = FALSE,
+                      debug = FALSE,
+                      max_age = Inf,
+                      max_n = Inf,
+                      max_size = 1024^3) {
+
+  check_number_whole(max_age, min = 0, allow_infinite = TRUE)
+  check_number_whole(max_n, min = 0, allow_infinite = TRUE)
+  check_number_decimal(max_size, min = 1, allow_infinite = TRUE)
+
   dir.create(path, showWarnings = FALSE, recursive = TRUE)
   req_policies(req,
     cache_path = path,
     cache_use_on_error = use_on_error,
-    cache_debug = debug
+    cache_debug = debug,
+    cache_max = list(age = max_age, n = max_n, size = max_size)
   )
 }
 
 # Do I need to worry about hash collisions?
 # No - even if the user stores a billion urls, the probably of a collision
 # is ~ 1e-20: https://preshing.com/20110504/hash-collision-probabilities/
-cache_path <- function(req, ext = ".rds") {
+req_cache_path <- function(req, ext = ".rds") {
   file.path(req$policies$cache_path, paste0(hash(req$url), ext))
 }
 cache_use_on_error <- function(req) {
@@ -65,13 +91,13 @@ cache_exists <- function(req) {
   if (!req_policy_exists(req, "cache_path")) {
     FALSE
   } else {
-    file.exists(cache_path(req))
+    file.exists(req_cache_path(req))
   }
 }
 
 # Callers responsibility to check that cache exists
 cache_get <- function(req) {
-  path <- cache_path(req)
+  path <- req_cache_path(req)
 
   touch(path)
   readRDS(path)
@@ -79,13 +105,60 @@ cache_get <- function(req) {
 
 cache_set <- function(req, resp) {
   if (is_path(resp$body)) {
-    body_path <- cache_path(req, ".body")
+    body_path <- req_cache_path(req, ".body")
     file.copy(resp$body, body_path, overwrite = TRUE)
     resp$body <- new_path(body_path)
   }
 
-  saveRDS(resp, cache_path(req, ".rds"))
+  saveRDS(resp, req_cache_path(req, ".rds"))
   invisible()
+}
+
+cache_prune_if_needed <- function(req, threshold = 60, debug = FALSE) {
+  path <- req$policies$cache_path
+
+  last_prune <- the$cache_throttle[[path]]
+  if (is.null(last_prune) || last_prune + threshold <= Sys.time()) {
+    if (debug) cli::cli_text("Pruning cache")
+    cache_prune(path, max = req$policies$cache_max, debug = debug)
+    the$cache_throttle[[path]] <- Sys.time()
+
+    invisible(TRUE)
+  } else {
+    invisible(FALSE)
+  }
+}
+
+# Adapted from
+# https://github.com/r-lib/cachem/blob/main/R/cache-disk.R#L396-L467
+cache_prune <- function(path, max, debug = TRUE) {
+  info <- cache_info(path)
+
+  info <- cache_prune_files(info, info$mtime + max$age < Sys.time(), "too old", debug)
+  info <- cache_prune_files(info, seq_len(nrow(info)) > max$n, "too numerous", debug)
+  info <- cache_prune_files(info, cumsum(info$size) > max$size, "too big", debug)
+
+  invisible()
+}
+
+cache_info <- function(path, pattern = "\\.rds$") {
+  filenames <- dir(path, pattern, full.names = TRUE)
+  info <- file.info(filenames, extra_cols = FALSE)
+  info <- info[info$isdir == FALSE, ]
+  info$name <- rownames(info)
+  rownames(info) <- NULL
+  info[order(info$mtime, decreasing = TRUE), c("name", "size", "mtime")]
+}
+
+cache_prune_files <- function(info, to_remove, why, debug = TRUE) {
+  if (any(to_remove)) {
+    if (debug) cli::cli_text("Deleted {sum(to_remove)} file{?s} that {?is/are} {why}")
+
+    file.remove(info$name[to_remove])
+    info[!to_remove, ]
+  } else {
+    info
+  }
 }
 
 # Hooks for req_perform -----------------------------------------------------
@@ -95,7 +168,9 @@ cache_pre_fetch <- function(req) {
   if (!cache_exists(req)) {
     return(req)
   }
+
   debug <- cache_debug(req)
+  cache_prune_if_needed(req, debug = debug)
 
   info <- resp_cache_info(cache_get(req))
   if (debug) cli::cli_text("Found url in cache {.val {hash(req$url)}}")
@@ -132,6 +207,10 @@ cache_post_fetch <- function(req, resp, path = NULL) {
 
     # Replace body with cached result
     resp$body <- cache_body(req, path)
+
+    # Combine headers
+    resp$headers <- cache_headers(req, resp)
+
     resp
   } else if (resp_is_cacheable(resp)) {
     if (debug) cli::cli_text("Saving response to cache {.val {hash(req$url)}}")
@@ -144,6 +223,7 @@ cache_post_fetch <- function(req, resp, path = NULL) {
 
 cache_body <- function(req, path = NULL) {
   body <- cache_get(req)$body
+
   if (is.null(path)) {
     return(body)
   }
@@ -154,6 +234,12 @@ cache_body <- function(req, path = NULL) {
     writeBin(body, path)
   }
   new_path(path)
+}
+
+cache_headers <- function(req, resp) {
+  # https://www.rfc-editor.org/rfc/rfc7232#section-4.1
+  cached_headers <- cache_get(req)$headers
+  as_headers(modify_list(cached_headers, !!!resp$headers))
 }
 
 # Caching headers ---------------------------------------------------------

@@ -1,29 +1,41 @@
-#' OAuth authentication with device flow
+#' OAuth with device flow
 #'
 #' @description
-#' This uses [oauth_flow_device()] to generate an access token, which is
-#' then used to authentication the request with [req_auth_bearer_token()].
-#' The token is automatically cached (either in memory or on disk) to minimise
-#' the number of times the flow is performed.
+#' Authenticate using the OAuth **device flow**, as defined by `r rfc(8628)`.
+#' It's designed for devices that don't have access to a web browser (if you've
+#' ever authenticated an app on your TV, this is probably the flow you've used),
+#' but it also works well from within R.
+#'
+#' Learn more about the overall OAuth authentication flow in `vignette("oauth")`.
 #'
 #' @export
 #' @inheritParams oauth_flow_password
 #' @inheritParams req_oauth_auth_code
-#' @returns A modified HTTP [request].
+#' @returns `req_oauth_device()` returns a modified HTTP [request] that will
+#'   use OAuth; `oauth_flow_device()` returns an [oauth_token].
 #' @examples
-#' client <- oauth_client("example", "https://example.com/get_token")
-#' req <- request("https://example.com")
+#' req_auth_github <- function(req) {
+#'   req_oauth_device(
+#'     req,
+#'     client = example_github_client(),
+#'     auth_url = "https://github.com/login/device/code"
+#'   )
+#' }
 #'
-#' req %>% req_oauth_device(client)
-req_oauth_device <- function(req, client,
-                             cache_disk = FALSE,
-                             cache_key = NULL,
+#' request("https://api.github.com/user") |>
+#'   req_auth_github()
+req_oauth_device <- function(req,
+                             client,
+                             auth_url,
                              scope = NULL,
                              auth_params = list(),
-                             token_params = list()) {
+                             token_params = list(),
+                             cache_disk = FALSE,
+                             cache_key = NULL) {
 
   params <- list(
     client = client,
+    auth_url = auth_url,
     scope = scope,
     auth_params = auth_params,
     token_params = token_params
@@ -32,26 +44,8 @@ req_oauth_device <- function(req, client,
   req_oauth(req, "oauth_flow_device", params, cache = cache)
 }
 
-#' OAuth flow: device
-#'
-#' @description
-#' These functions implement the OAuth device flow, as defined
-#' by [rfc8628](https://datatracker.ietf.org/doc/html/rfc8628). It's designed
-#' for devices that don't have access to a web browser (if you've ever
-#' authenticated an app on your TV, this is probably the flow you've used),
-#' but it also works well from within R.
-#'
-#' This specification allows also some subspecifications:
-#' * `oauth_flow_auth_code_pkce()` is also reused here to generate code
-#'   verifier, method, and challenge components as needed for PKCE, as
-#'   defined in [rfc7636](https://datatracker.ietf.org/doc/html/rfc7636).
-#'
-#' @inheritParams oauth_flow_auth_code
-#' @returns An [oauth_token].
 #' @export
-#' @family OAuth flows
-#' @keywords internal
-#' @keywords internal
+#' @rdname req_oauth_device
 oauth_flow_device <- function(client,
                               auth_url,
                               pkce = FALSE,
@@ -87,7 +81,7 @@ oauth_flow_device <- function(client,
 
   token <- oauth_flow_device_poll(client, request, token_params)
   if (is.null(token)) {
-    abort("Expired without user confirmation; please try again.")
+    cli::cli_abort("Expired without user confirmation; please try again.")
   }
 
   exec(oauth_token, !!!token)
@@ -96,18 +90,25 @@ oauth_flow_device <- function(client,
 # Device authorization request and response
 # https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
 # https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
-oauth_flow_device_request <- function(client, auth_url, scope, auth_params) {
+oauth_flow_device_request <- function(client,
+                                      auth_url,
+                                      scope,
+                                      auth_params,
+                                      error_call = caller_env()) {
   req <- request(auth_url)
   req <- req_body_form(req, scope = scope, !!!auth_params)
   req <- oauth_client_req_auth(req, client)
   req <- req_headers(req, Accept = "application/json")
 
-  oauth_flow_fetch(req)
+  oauth_flow_fetch(req, "auth_url", error_call = error_call)
 }
 
 # Device Access Token Request
 # https://datatracker.ietf.org/doc/html/rfc8628#section-3.4
-oauth_flow_device_poll <- function(client, request, token_params) {
+oauth_flow_device_poll <- function(client,
+                                   request,
+                                   token_params,
+                                   error_call = caller_env()) {
   cli::cli_progress_step("Waiting for response from server", spinner = TRUE)
 
   delay <- request$interval %||% 5
@@ -125,7 +126,8 @@ oauth_flow_device_poll <- function(client, request, token_params) {
         token <- oauth_client_get_token(client,
           grant_type = "urn:ietf:params:oauth:grant-type:device_code",
           device_code = request$device_code,
-          !!!token_params
+          !!!token_params,
+          error_call = error_call
         )
         break
       },

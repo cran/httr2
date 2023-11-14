@@ -11,11 +11,13 @@
 #' @param ... Additional components returned by the endpoint
 #' @param .date Date the request was made; used to convert the relative
 #'   `expires_in` to an absolute `expires_at`.
+#' @seealso [oauth_token_cached()] to use the token cache with a specified
+#'   OAuth flow.
 #' @return An OAuth token: an S3 list with class `httr2_token`.
 #' @export
 #' @examples
 #' oauth_token("abcdef")
-#' oauth_token("abcdef", expires_in = Sys.time() + 3600)
+#' oauth_token("abcdef", expires_in = 3600)
 #' oauth_token("abcdef", refresh_token = "ghijkl")
 oauth_token <- function(
                         access_token,
@@ -26,11 +28,9 @@ oauth_token <- function(
                         .date = Sys.time()
                         ) {
 
-  check_string(access_token, "`access_token`")
-  check_string(token_type, "`token_type`")
-  if (!is.null(expires_in)) {
-    check_number(expires_in, "`expires_in`")
-  }
+  check_string(access_token)
+  check_string(token_type)
+  check_number_whole(expires_in, allow_null = TRUE)
   # TODO: should tokens always store their scope?
 
   if (!is.null(expires_in)) {

@@ -2,7 +2,7 @@
 % Please edit documentation in R/req-perform.R
 \name{req_perform}
 \alias{req_perform}
-\title{Perform a request}
+\title{Perform a request to get a response}
 \usage{
 req_perform(
   req,
@@ -41,10 +41,16 @@ mentioned in error messages as the source of the error. See the
 \code{call} argument of \code{\link[rlang:abort]{abort()}} for more information.}
 }
 \value{
-If request is successful (i.e. the request was successfully
-performed and a response with HTTP status code <400 was recieved), an HTTP
-\link{response}; otherwise throws an error. Override this behaviour with
-\code{\link[=req_error]{req_error()}}.
+\itemize{
+\item If the HTTP request succeeds, and the status code is ok (e.g. 200),
+an HTTP \link{response}.
+\item If the HTTP request succeeds, but the status code is an error
+(e.g a 404), an error with class \code{c("httr2_http_404", "httr2_http")}.
+By default, all 400 and 500 status codes will be treated as an error,
+but you can customise this with \code{\link[=req_error]{req_error()}}.
+\item If the HTTP request fails (e.g. the connection is dropped or the
+server doesn't exist), an error with class \code{"httr2_failure"}.
+}
 }
 \description{
 After preparing a \link{request}, call \code{req_perform()} to perform it, fetching
@@ -68,7 +74,18 @@ or by running the OAuth flow.
 }
 }
 
+\section{Progress bar}{
+\code{req_perform()} will automatically add a progress bar if it needs to wait
+between requests for \code{\link[=req_throttle]{req_throttle()}} or \code{\link[=req_retry]{req_retry()}}. You can turn the
+progress bar off (and just show the total time to wait) by setting
+\code{options(httr2_progress = FALSE)}.
+}
+
 \examples{
-request("https://google.com") \%>\%
+request("https://google.com") |>
   req_perform()
+}
+\seealso{
+\code{\link[=req_perform_parallel]{req_perform_parallel()}} to perform multiple requests in parallel.
+\code{\link[=req_perform_iterative]{req_perform_iterative()}} to perform multiple requests iteratively.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/multi-req.R
 \name{multi_req_perform}
 \alias{multi_req_perform}
-\title{Perform multiple requests in parallel}
+\title{Perform a list of requests in parallel}
 \usage{
 multi_req_perform(reqs, paths = NULL, pool = NULL, cancel_on_error = FALSE)
 }
@@ -17,57 +17,16 @@ this if you want to override the defaults for total concurrent connections
 (100) or concurrent connections per host (6).}
 
 \item{cancel_on_error}{Should all pending requests be cancelled when you
-hit an error. Set this to \code{TRUE} to stop all requests as soon as you
-hit an error. Responses that were never performed will have class
-\code{httr2_cancelled} in the result.}
-}
-\value{
-A list the same length as \code{reqs} where each element is either a
-\link{response} or an \code{error}.
+hit an error? Set this to \code{TRUE} to stop all requests as soon as you
+hit an error. Responses that were never performed be \code{NULL} in the result.}
 }
 \description{
-This variation on \code{\link[=req_perform]{req_perform()}} performs multiple requests in parallel.
-Unlike \code{req_perform()} it always succeeds; it will never throw an error.
-Instead it will return error objects, which are your responsibility to
-handle.
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}
 
-Exercise caution when using this function; it's easy to pummel a server
-with many simultaneous requests. Only use it with hosts designed to serve
-many files at once.
-}
-\section{Limitations}{
+Please use \code{\link[=req_perform_parallel]{req_perform_parallel()}} instead, and note:
 \itemize{
-\item Will not retrieve a new OAuth token if it expires part way through
-the requests.
-\item Does not perform throttling with \code{\link[=req_throttle]{req_throttle()}}.
-\item Does not attempt retries as described by \code{\link[=req_retry]{req_retry()}}.
-\item Consults the cache set by \code{\link[=req_cache]{req_cache()}} before/after all requests.
+\item \code{cancel_on_error = FALSE} is now \code{on_error = "continue"}
+\item \code{cancel_on_error = TRUE} is now \code{on_error = "return"}
 }
-
-In general, where \code{\link[=req_perform]{req_perform()}} might make multiple requests due to retries
-or OAuth failures, \code{multi_req_perform()} will make only make 1.
 }
-
-\examples{
-# Requesting these 4 pages one at a time would take 2 seconds:
-request_base <- request(example_url())
-reqs <- list(
-  request_base \%>\% req_url_path("/delay/0.5"),
-  request_base \%>\% req_url_path("/delay/0.5"),
-  request_base \%>\% req_url_path("/delay/0.5"),
-  request_base \%>\% req_url_path("/delay/0.5")
-)
-# But it's much faster if you request in parallel
-system.time(resps <- multi_req_perform(reqs))
-
-reqs <- list(
-  request_base \%>\% req_url_path("/status/200"),
-  request_base \%>\% req_url_path("/status/400"),
-  request("FAILURE")
-)
-# multi_req_perform() will always succeed
-resps <- multi_req_perform(reqs)
-# you'll need to inspect the results to figure out which requests fails
-fail <- vapply(resps, inherits, "error", FUN.VALUE = logical(1))
-resps[fail]
-}
+\keyword{internal}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/req-throttle.R
 \name{req_throttle}
 \alias{req_throttle}
-\title{Throttle a request by automatically adding a delay}
+\title{Rate limit a request by automatically adding a delay}
 \usage{
 req_throttle(req, rate, realm = NULL)
 }
@@ -26,7 +26,7 @@ exceed a specified rate.
 }
 \examples{
 # Ensure we never send more than 30 requests a minute
-req <- request("https://example.com") \%>\%
+req <- request(example_url()) |>
   req_throttle(rate = 30 / 60)
 
 resp <- req_perform(req)

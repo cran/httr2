@@ -4,6 +4,7 @@
 \alias{req_body_raw}
 \alias{req_body_file}
 \alias{req_body_json}
+\alias{req_body_json_modify}
 \alias{req_body_form}
 \alias{req_body_multipart}
 \title{Send data in request body}
@@ -12,9 +13,19 @@ req_body_raw(req, body, type = NULL)
 
 req_body_file(req, path, type = NULL)
 
-req_body_json(req, data, auto_unbox = TRUE, digits = 22, null = "null", ...)
+req_body_json(
+  req,
+  data,
+  auto_unbox = TRUE,
+  digits = 22,
+  null = "null",
+  type = "application/json",
+  ...
+)
 
-req_body_form(.req, ...)
+req_body_json_modify(req, ...)
+
+req_body_form(.req, ..., .multi = c("error", "comma", "pipe", "explode"))
 
 req_body_multipart(.req, ...)
 }
@@ -23,8 +34,10 @@ req_body_multipart(.req, ...)
 
 \item{body}{A literal string or raw vector to send as body.}
 
-\item{type}{Content type. For \code{req_body_file()}, the default
-will will attempt to guess from the extension of \code{path}.}
+\item{type}{MIME content type. You shouldn't generally need to specify this as
+the defaults are usually pretty good, e.g. \code{req_body_file()} will guess it
+from the extension of of \code{path}. Will be ignored if you have manually set
+a \code{Content-Type} header.}
 
 \item{path}{Path to file to upload.}
 
@@ -38,13 +51,31 @@ JSON scalars?}
 \item{null}{Should \code{NULL} be translated to JSON's null (\code{"null"})
 or an empty list (\code{"list"}).}
 
-\item{...}{Name-data pairs used send data in the body. For
-\code{req_body_form()}, the values must be strings (or things easily
-coerced to string); for \code{req_body_multipart()} the values must be
-strings or objects produced by \code{\link[curl:multipart]{curl::form_file()}}/\code{\link[curl:multipart]{curl::form_data()}}.
+\item{...}{<\code{\link[rlang:dyn-dots]{dynamic-dots}}> Name-data pairs used to send
+data in the body.
+\itemize{
+\item For \code{req_body_form()}, the values must be strings (or things easily
+coerced to strings);
+\item For \code{req_body_multipart()} the values must be strings or objects
+produced by \code{\link[curl:multipart]{curl::form_file()}}/\code{\link[curl:multipart]{curl::form_data()}}.
+\item For \code{req_body_json_modify()}, any simple data made from atomic vectors
+and lists.
+}
 
-For \code{req_body_json()}, additional arguments passed on to
-\code{\link[jsonlite:fromJSON]{jsonlite::toJSON()}}.}
+\code{req_body_json()} uses this argument differently; it takes additional
+arguments passed on to  \code{\link[jsonlite:fromJSON]{jsonlite::toJSON()}}.}
+
+\item{.multi}{Controls what happens when an element of \code{...} is a vector
+containing multiple values:
+\itemize{
+\item \code{"error"}, the default, throws an error.
+\item \code{"comma"}, separates values with a \verb{,}, e.g. \verb{?x=1,2}.
+\item \code{"pipe"}, separates values with a \code{|}, e.g. \code{?x=1|2}.
+\item \code{"explode"}, turns each element into its own parameter, e.g. \code{?x=1&x=2}.
+}
+
+If none of these functions work, you can alternatively supply a function
+that takes a character vector and returns a string.}
 }
 \value{
 A modified HTTP \link{request}.
@@ -53,7 +84,8 @@ A modified HTTP \link{request}.
 \itemize{
 \item \code{req_body_file()} sends a local file.
 \item \code{req_body_raw()} sends a string or raw vector.
-\item \code{req_body_json()} sends JSON encoded data.
+\item \code{req_body_json()} sends JSON encoded data. Named components of this data
+can later be modified with \code{req_body_json_modify()}.
 \item \code{req_body_form()} sends form encoded data.
 \item \code{req_body_multipart()} creates a multi-part body.
 }
@@ -61,21 +93,21 @@ A modified HTTP \link{request}.
 Adding a body to a request will automatically switch the method to POST.
 }
 \examples{
-req <- request(example_url()) \%>\%
+req <- request(example_url()) |>
   req_url_path("/post")
 
 # Most APIs expect small amounts of data in either form or json encoded:
-req \%>\%
-  req_body_form(x = "A simple text string") \%>\%
+req |>
+  req_body_form(x = "A simple text string") |>
   req_dry_run()
 
-req \%>\%
-  req_body_json(list(x = "A simple text string")) \%>\%
+req |>
+  req_body_json(list(x = "A simple text string")) |>
   req_dry_run()
 
 # For total control over the body, send a string or raw vector
-req \%>\%
-  req_body_raw("A simple text string") \%>\%
+req |>
+  req_body_raw("A simple text string") |>
   req_dry_run()
 
 # There are two main ways that APIs expect entire files
@@ -83,13 +115,13 @@ path <- tempfile()
 writeLines(letters[1:6], path)
 
 # You can send a single file as the body:
-req \%>\%
-  req_body_file(path) \%>\%
+req |>
+  req_body_file(path) |>
   req_dry_run()
 
 # You can send multiple files, or a mix of files and data
 # with multipart encoding
-req \%>\%
-  req_body_multipart(a = curl::form_file(path), b = "some data") \%>\%
+req |>
+  req_body_multipart(a = curl::form_file(path), b = "some data") |>
   req_dry_run()
 }

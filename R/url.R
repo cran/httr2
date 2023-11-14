@@ -1,9 +1,8 @@
 #' Parse and build URLs
 #'
 #' `url_parse()` parses a URL into its component pieces; `url_build()` does
-#' the reverse, converting a list of pieces into a string URL. See
-#' [rfc3986](https://www.rfc-editor.org/rfc/rfc3986) for details of parsing
-#' algorithm.
+#' the reverse, converting a list of pieces into a string URL. See `r rfc(3986)`
+#' for the details of the parsing algorithm.
 #'
 #' @param url For `url_parse()` a string to parse into a URL;
 #'   for `url_build()` a URL to turn back into a string.
@@ -25,7 +24,7 @@
 #' url$query <- list(a = 1, b = 2, c = 3)
 #' url_build(url)
 url_parse <- function(url) {
-  check_string(url, "`url`")
+  check_string(url)
 
   # https://datatracker.ietf.org/doc/html/rfc3986#appendix-B
   pieces <- parse_match(url, "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?")
@@ -68,9 +67,9 @@ url_parse <- function(url) {
   )
 }
 
-url_modify <- function(url, ...) {
+url_modify <- function(url, ..., error_call = caller_env()) {
   url <- url_parse(url)
-  url <- modify_list(url, ...)
+  url <- modify_list(url, ..., error_call = error_call)
   url_build(url)
 }
 
@@ -100,7 +99,9 @@ print.httr2_url <- function(x, ...) {
   if (!is.null(x$query)) {
     cli::cli_li("{.field query}: ")
     id <- cli::cli_ul()
-    cli::cli_li(paste0("  {.field ", names(x$query), "}: ", x$query))
+    # escape curly brackets for cli by replacing single with double brackets
+    query_vals <- gsub("\\{", "{{", gsub("\\}", "}}", x$query))
+    cli::cli_li(paste0("  {.field ", names(x$query), "}: ", query_vals))
     cli::cli_end(id)
   }
   if (!is.null(x$fragment)) {
@@ -121,7 +122,7 @@ url_build <- function(url) {
   if (is.null(url$username) && is.null(url$password)) {
     user_pass <- NULL
   } else if (is.null(url$username) && !is.null(url$password)) {
-    abort("Cannot set url password without username")
+    cli::cli_abort("Cannot set url {.arg password} without {.arg username}.")
   } else if (!is.null(url$username) && is.null(url$password)) {
     user_pass <- paste0(url$username, "@")
   } else {
@@ -135,6 +136,10 @@ url_build <- function(url) {
     }
   } else {
     authority <- NULL
+  }
+
+  if (!is.null(url$path) && !startsWith(url$path, "/")) {
+    url$path <- paste0("/", url$path)
   }
 
   prefix <- function(prefix, x) if (!is.null(x)) paste0(prefix, x)
@@ -160,9 +165,9 @@ query_parse <- function(x) {
   out
 }
 
-query_build <- function(x) {
+query_build <- function(x, error_call = caller_env()) {
   if (!is_list(x) || (!is_named(x) && length(x) > 0)) {
-    abort("Query must be a named list")
+    cli::cli_abort("Query must be a named list.", call = error_call)
   }
 
   x <- compact(x)
@@ -172,25 +177,29 @@ query_build <- function(x) {
 
   bad_val <- lengths(x) != 1 | !map_lgl(x, is_atomic)
   if (any(bad_val)) {
-    abort(c(
-      "Query parameters must be length 1 atomic vectors.",
-      paste0("Problems: ", paste0(names(x)[bad_val], collapse =", "))
-    ))
+    cli::cli_abort(
+      c(
+        "Query parameters must be length 1 atomic vectors.",
+        "*" = "Problems: {.str {names(x)[bad_val]}}."
+      ),
+      call = error_call
+    )
   }
 
-  is_double <- map_lgl(x, is.double)
-  x[is_double] <- map_chr(x[is_double], format, scientific = FALSE)
-
   names <- curl::curl_escape(names(x))
-  values <- map_chr(x, url_escape)
+  values <- map_chr(x, format_query_param, error_call = error_call)
 
   paste0(names, "=", values, collapse = "&")
 }
 
-url_escape <- function(x) {
+
+format_query_param <- function(x, error_call = caller_env()) {
   if (inherits(x, "AsIs")) {
-    x
-  } else {
-    curl::curl_escape(x)
+    x <- unclass(x)
+    check_string(x, call = error_call, arg = I("Escaped query value"))
+    return(x)
   }
+
+  x <- format(x, scientific = FALSE, trim = TRUE, justify = "none")
+  curl::curl_escape(x)
 }

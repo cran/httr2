@@ -4,22 +4,22 @@
       x <- obfuscated("abcdef")
       x
     Output
-      <OBFUSCATED>
+      obfuscated("abcdef")
     Code
       str(x)
     Output
-       <OBFUSCATED>
+       obfuscated("abcdef")
 
 # can coerce to a key
 
     Code
       as_key("ENVVAR_THAT_DOESNT_EXIST")
     Condition
-      Error in `as_key()`:
+      Error:
       ! Can't find envvar ENVVAR_THAT_DOESNT_EXIST
     Code
       as_key(1)
     Condition
-      Error in `as_key()`:
-      ! `key` must be a raw vector containing the key, a string giving the name of an env var, or a string wrapped in I() that contains the base64url encoded key
+      Error:
+      ! `key` must be a raw vector containing the key, a string giving the name of an env var, or a string wrapped in `I()` that contains the base64url encoded key.
 

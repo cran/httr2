@@ -16,14 +16,6 @@ test_that("replacement affects all components with name", {
   expect_equal(modify_list(x, a = 3, a = 4), list(a = 3, a =4))
 })
 
-test_that("can check arg types", {
-  expect_snapshot(error = TRUE, {
-    check_string(1, "x")
-    check_number("2", "x")
-    check_number(NA_real_, "x")
-  })
-})
-
 test_that("respects httr2 verbosity option", {
   expect_equal(with_verbosity(httr2_verbosity()), 1)
 })
@@ -35,4 +27,10 @@ test_that("respects httr verbose config", {
   config <- list(options = list(debugfunction = identity))
   withr::local_options(httr_config = config)
   expect_equal(httr2_verbosity(), 1)
+})
+
+test_that("can suppress progress bar", {
+  withr::local_options(httr2_progress = FALSE)
+
+  expect_snapshot(sys_sleep(0.1, "for test"))
 })

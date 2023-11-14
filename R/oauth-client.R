@@ -12,7 +12,7 @@
 #'   so in principle you should avoid storing it in source code. However, many
 #'   APIs require it in order to provide a user friendly authentication
 #'   experience, and the risks of including it are usually low. To make things
-#'   a little safer, I recommend using [obfuscate()] when recorded the client
+#'   a little safer, I recommend using [obfuscate()] when recording the client
 #'   secret in public code.
 #' @param key Client key. As an alternative to using a `secret`, you can
 #'   instead supply a confidential private key. This should never be included
@@ -23,7 +23,7 @@
 #'   the contents of `auth_params`.
 #'
 #'   The most common mechanism in the wild is `"body"` where the `client_id` and
-#'   (optionally) `client_secret` are added to the body. `"header"` sends in
+#'   (optionally) `client_secret` are added to the body. `"header"` sends the
 #'   `client_id` and `client_secret` in HTTP Authorization header. `"jwt_sig"`
 #'   will generate a JWT, and include it in a `client_assertion` field in the
 #'   body.
@@ -31,9 +31,9 @@
 #'   See [oauth_client_req_auth()] for more details.
 #' @param auth_params Additional parameters passed to the function specified
 #'   by `auth`.
-#' @param name Optional name for the client. Used when generating cache
+#' @param name Optional name for the client. Used when generating the cache
 #'   directory. If `NULL`, generated from hash of `client_id`. If you're
-#'   defining a package for use in a package, I recommend that you use
+#'   defining a client for use in a package, I recommend that you use
 #'   the package name.
 #' @return An OAuth client: An S3 list with class `httr2_oauth_client`.
 #' @export
@@ -49,9 +49,9 @@ oauth_client <- function(
                          name = hash(id)
                          ) {
 
-  check_string(id, "`id`")
-  check_string(token_url, "`token_url`")
-  check_string(secret, "`secret`", optional = TRUE)
+  check_string(id)
+  check_string(token_url)
+  check_string(secret, allow_null = TRUE)
 
   if (is.character(auth)) {
     if (missing(auth)) {
@@ -60,19 +60,19 @@ oauth_client <- function(
     auth <- arg_match(auth)
 
     if (auth == "header" && is.null(secret)) {
-      abort("`auth = 'header' requires a `secret`")
+      cli::cli_abort("{.code auth = 'header'} requires a {.arg secret}.")
     } else if (auth == "jwt_sig") {
       if (is.null(key)) {
-        abort("`auth = 'jwt_sig' requires a `key`")
+        cli::cli_abort("{.code auth = 'jwt_sig'} requires a {.arg key}.")
       }
       if (!has_name(auth_params, "claim")) {
-        abort("`auth = 'jwt_sig' requires a claim specification in `auth_params`")
+        cli::cli_abort("{.code auth = 'jwt_sig'} requires a claim specification in {.arg auth_params}.")
       }
     }
 
     auth <- paste0("oauth_client_req_auth_", auth)
   } else if (!is_function(auth)) {
-    abort("`auth` must be a string or function")
+    cli::cli_abort("{.arg auth} must be a string or function.")
   }
 
   structure(
@@ -102,25 +102,21 @@ print.httr2_oauth_client <- function(x, ...) {
 #' @description
 #' `oauth_client_req_auth()` authenticates a request using the authentication
 #' strategy defined by the `auth` and `auth_param` arguments to [oauth_client()].
-#' This used to authenticate the client as part of the OAuth flow, **not**
+#' This is used to authenticate the client as part of the OAuth flow, **not**
 #' to authenticate a request on behalf of a user.
 #'
 #' There are three built-in strategies:
 #'
 #' * `oauth_client_req_body()` adds the client id and (optionally) the secret
-#'    to the request body, as described in
-#'   [rfc6749](https://datatracker.ietf.org/doc/html/rfc6749#section-2.3.1),
-#'   Section 2.3.1.
+#'   to the request body, as described in `r rfc(6749, "2.3.1")`.
 #'
 #' * `oauth_client_req_header()` adds the client id and secret using HTTP
-#'   basic authentication with the `Authorization` header, as described in
-#'   [rfc6749](https://datatracker.ietf.org/doc/html/rfc6749#section-2.3.1),
-#'   Section 2.3.1.
+#'   basic authentication with the `Authorization` header, as described
+#'   in `r rfc(6749, "2.3.1")`.
 #'
 #' * `oauth_client_jwt_rs256()` adds a client assertion to the body using a
-#'   JWT signed with `jwt_sign_rs256()` using a private key, as described in
-#'   [rfc7523](https://datatracker.ietf.org/doc/html/rfc7523#section-2.2),
-#'   Section 2.2.
+#'   JWT signed with `jwt_sign_rs256()` using a private key, as described
+#'   in `r rfc(7523, 2.2)`.
 #'
 #' You will generally not call these functions directly but will instead
 #' specify them through the `auth` argument to [oauth_client()]. The `req` and
@@ -204,31 +200,44 @@ oauth_client_req_auth_jwt_sig <- function(req, client, claim, size = 256, header
 
 oauth_flow_check <- function(flow, client,
                              is_confidential = FALSE,
-                             interactive = FALSE) {
+                             interactive = FALSE,
+                             error_call = caller_env()) {
 
   if (!inherits(client, "httr2_oauth_client")) {
-    abort("`client` must be an OAuth client created with `oauth_client()`")
+    cli::cli_abort(
+      "{.arg client} must be an OAuth client created with {.fn oauth_client}.",
+      call = error_call
+    )
   }
 
   if (is_confidential && is.null(client$secret) && is.null(client$key)) {
-    abort(c(
-      glue("Can't use this `app` with OAuth 2.0 {flow} flow"),
-      "`app` must have a confidential client (i.e. `client_secret` is required)"
-    ))
+    cli::cli_abort(
+      c(
+        "Can't use this {.arg app} with OAuth 2.0 {flow} flow.",
+        i = "{.arg app} must have a confidential client (i.e. {.arg client_secret} is required)."
+      ),
+      call = error_call
+    )
   }
 
   if (interactive && !is_interactive()) {
-    abort(glue("OAuth 2.0 {flow} flow requires an interactive session"))
+    cli::cli_abort(
+      "OAuth 2.0 {flow} flow requires an interactive session",
+      call = error_call
+    )
   }
 }
 
-oauth_client_get_token <- function(client, grant_type, ...) {
+oauth_client_get_token <- function(client,
+                                   grant_type,
+                                   ...,
+                                   error_call = caller_env()) {
   req <- request(client$token_url)
   req <- req_body_form(req, grant_type = grant_type, ...)
   req <- oauth_client_req_auth(req, client)
   req <- req_headers(req, Accept = "application/json")
 
-  resp <- oauth_flow_fetch(req)
+  resp <- oauth_flow_fetch(req, "client$token_url", error_call = error_call)
   exec(oauth_token, !!!resp)
 }
 

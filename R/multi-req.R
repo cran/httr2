@@ -1,98 +1,145 @@
-#' Perform multiple requests in parallel
+#' Perform a list of requests in parallel
 #'
 #' @description
-#' This variation on [req_perform()] performs multiple requests in parallel.
-#' Unlike `req_perform()` it always succeeds; it will never throw an error.
-#' Instead it will return error objects, which are your responsibility to
-#' handle.
+#' This variation on [req_perform_sequential()] performs multiple requests in
+#' parallel. Exercise caution when using this function; it's easy to pummel a
+#' server with many simultaneous requests. Only use it with hosts designed to
+#' serve many files at once, which are typically web servers, not API servers.
 #'
-#' Exercise caution when using this function; it's easy to pummel a server
-#' with many simultaneous requests. Only use it with hosts designed to serve
-#' many files at once.
-#'
-#' # Limitations
+#' `req_perform_parallel()` has a few limitations:
 #'
 #' * Will not retrieve a new OAuth token if it expires part way through
 #'   the requests.
 #' * Does not perform throttling with [req_throttle()].
 #' * Does not attempt retries as described by [req_retry()].
-#' * Consults the cache set by [req_cache()] before/after all requests.
+#' * Only consults the cache set by [req_cache()] before/after all requests.
 #'
-#' In general, where [req_perform()] might make multiple requests due to retries
-#' or OAuth failures, `multi_req_perform()` will make only make 1.
+#' If any of these limitations are problematic for your use case, we recommend
+#' [req_perform_sequential()] instead.
 #'
-#' @param reqs A list of [request]s.
-#' @param paths An optional list of paths, if you want to download the request
-#'   bodies to disks. If supplied, must be the same length as `reqs`.
+#' @inherit req_perform_sequential params return
 #' @param pool Optionally, a curl pool made by [curl::new_pool()]. Supply
 #'   this if you want to override the defaults for total concurrent connections
 #'   (100) or concurrent connections per host (6).
-#' @param cancel_on_error Should all pending requests be cancelled when you
-#'   hit an error. Set this to `TRUE` to stop all requests as soon as you
-#'   hit an error. Responses that were never performed will have class
-#'   `httr2_cancelled` in the result.
-#' @returns A list the same length as `reqs` where each element is either a
-#'   [response] or an `error`.
 #' @export
 #' @examples
 #' # Requesting these 4 pages one at a time would take 2 seconds:
 #' request_base <- request(example_url())
 #' reqs <- list(
-#'   request_base %>% req_url_path("/delay/0.5"),
-#'   request_base %>% req_url_path("/delay/0.5"),
-#'   request_base %>% req_url_path("/delay/0.5"),
-#'   request_base %>% req_url_path("/delay/0.5")
+#'   request_base |> req_url_path("/delay/0.5"),
+#'   request_base |> req_url_path("/delay/0.5"),
+#'   request_base |> req_url_path("/delay/0.5"),
+#'   request_base |> req_url_path("/delay/0.5")
 #' )
 #' # But it's much faster if you request in parallel
-#' system.time(resps <- multi_req_perform(reqs))
+#' system.time(resps <- req_perform_parallel(reqs))
 #'
+#' # req_perform_parallel() will fail on error
 #' reqs <- list(
-#'   request_base %>% req_url_path("/status/200"),
-#'   request_base %>% req_url_path("/status/400"),
+#'   request_base |> req_url_path("/status/200"),
+#'   request_base |> req_url_path("/status/400"),
 #'   request("FAILURE")
 #' )
-#' # multi_req_perform() will always succeed
-#' resps <- multi_req_perform(reqs)
-#' # you'll need to inspect the results to figure out which requests fails
-#' fail <- vapply(resps, inherits, "error", FUN.VALUE = logical(1))
-#' resps[fail]
-multi_req_perform <- function(reqs, paths = NULL, pool = NULL, cancel_on_error = FALSE) {
-  if (!is.null(paths)) {
-    if (length(reqs) != length(paths)) {
-      abort("If supplied, `paths` must be the same length as `req`")
-    }
-  }
+#' try(resps <- req_perform_parallel(reqs))
+#'
+#' # but can use on_error to capture all successful results
+#' resps <- req_perform_parallel(reqs, on_error = "continue")
+#'
+#' # Inspect the successful responses
+#' resps |> resps_successes()
+#'
+#' # And the failed responses
+#' resps |> resps_failures() |> resps_requests()
+req_perform_parallel <- function(reqs,
+                                 paths = NULL,
+                                 pool = NULL,
+                                 on_error = c("stop", "return", "continue"),
+                                 progress = TRUE) {
+  check_paths(paths, reqs)
+  on_error <- arg_match(on_error)
+
+  progress <- create_progress_bar(
+    total = length(reqs),
+    name = "Iterating",
+    config = progress
+  )
 
   perfs <- vector("list", length(reqs))
   for (i in seq_along(reqs)) {
-    perfs[[i]] <- Performance$new(req = reqs[[i]], path = paths[[i]])
+    perfs[[i]] <- Performance$new(
+      req = reqs[[i]],
+      path = paths[[i]],
+      progress = progress,
+      error_call = environment()
+    )
     perfs[[i]]$submit(pool)
   }
 
-  pool_run(pool, perfs, cancel_on_error = cancel_on_error)
+  pool_run(pool, perfs, on_error = on_error)
+  progress$done()
+
   map(perfs, ~ .$resp)
 }
 
-pool_run <- function(pool, perfs, cancel_on_error = FALSE) {
-  poll_until_done <- function(pool) {
+
+#' Perform a list of requests in parallel
+#'
+#' @description
+#' `r lifecycle::badge("deprecated")`
+#'
+#' Please use [req_perform_parallel()] instead, and note:
+#'
+#' * `cancel_on_error = FALSE` is now `on_error = "continue"`
+#' * `cancel_on_error = TRUE` is now `on_error = "return"`
+#'
+#' @export
+#' @param cancel_on_error Should all pending requests be cancelled when you
+#'   hit an error? Set this to `TRUE` to stop all requests as soon as you
+#'   hit an error. Responses that were never performed be `NULL` in the result.
+#' @inheritParams req_perform_parallel
+#' @keywords internal
+multi_req_perform <- function(reqs,
+                              paths = NULL,
+                              pool = NULL,
+                              cancel_on_error = FALSE) {
+  lifecycle::deprecate_warn(
+    "1.0.0",
+    "multi_req_perform()",
+    "req_perform_parallel()"
+  )
+  check_bool(cancel_on_error)
+
+  req_perform_parallel(
+    reqs = reqs,
+    paths = paths,
+    pool = pool,
+    on_error = if (cancel_on_error) "continue" else "return"
+  )
+}
+
+pool_run <- function(pool, perfs, on_error = "continue") {
+  on.exit(pool_cancel(pool, perfs), add = TRUE)
+
+  # The done and fail callbacks for curl::multi_add() are designed to always
+  # succeed. If the request actually failed, they raise a `httr_fail`
+  # signal (not error) that wraps the error. Here we catch that error and
+  # handle it based on the value of `on_error`
+  httr2_fail <- switch(on_error,
+    stop =     function(cnd) cnd_signal(cnd$error),
+    continue = function(cnd) zap(),
+    return =   function(cnd) NULL
+  )
+
+  try_fetch(
     repeat({
-      # TODO: progress bar
       run <- curl::multi_run(0.1, pool = pool, poll = TRUE)
       if (run$pending == 0) {
         break
       }
-    })
-  }
-
-  cancel <- function(cnd) pool_cancel(pool, perfs)
-  if (!cancel_on_error) {
-    tryCatch(poll_until_done(pool), interrupt = cancel)
-  } else {
-    tryCatch(poll_until_done(pool), interrupt = cancel, `httr2:::failed` = cancel)
-  }
-
-  # Ensuring any pending handles are still completed
-  curl::multi_run(pool = pool)
+    }),
+    interrupt = function(cnd) NULL,
+    httr2_fail = httr2_fail
+  )
 
   invisible()
 }
@@ -105,10 +152,14 @@ Performance <- R6Class("Performance", public = list(
   handle = NULL,
   resp = NULL,
   pool = NULL,
+  error_call = NULL,
+  progress = NULL,
 
-  initialize = function(req, path = NULL) {
+  initialize = function(req, path = NULL, progress = NULL, error_call = NULL) {
     self$req <- req
     self$path <- path
+    self$progress <- progress
+    self$error_call <- error_call
 
     req <- auth_oauth_sign(req)
     req <- cache_pre_fetch(req)
@@ -122,12 +173,13 @@ Performance <- R6Class("Performance", public = list(
 
   submit = function(pool = NULL) {
     if (!is.null(self$resp)) {
+      # cached
       return()
     }
 
     self$pool <- pool
-    self$resp <- error_cnd("httr2_cancelled", message = "Request cancelled")
-    curl::multi_add(self$handle,
+    curl::multi_add(
+      handle = self$handle,
       pool = self$pool,
       data = self$path,
       done = self$succeed,
@@ -137,28 +189,42 @@ Performance <- R6Class("Performance", public = list(
   },
 
   succeed = function(res) {
+    self$progress$update()
+
     body <- if (is.null(self$path)) res$content else new_path(self$path)
     resp <- new_response(
       method = req_method_get(self$req),
       url = res$url,
       status_code = res$status_code,
       headers = as_headers(res$headers),
-      body = body
+      body = body,
+      request = self$req
     )
     resp <- cache_post_fetch(self$reqs, resp, path = self$paths)
 
-    self$resp <- tryCatch(resp_check_status(resp), error = identity)
+    self$resp <- tryCatch(
+      resp_check_status(resp, error_call = self$error_call),
+      error = identity
+    )
     if (is_error(self$resp)) {
-      signal("", class = "httr2:::failed")
+      signal("", error = self$resp, class = "httr2_fail")
     }
   },
 
   fail = function(msg) {
-    self$resp <- error_cnd("httr2_failed", message = msg)
-    signal("", class = "httr2:::failed")
+    self$progress$update()
+
+    self$resp <- error_cnd(
+      "httr2_failure",
+      message = msg,
+      request = self$req,
+      call = self$error_call
+    )
+    signal("", error = self$resp, class = "httr2_fail")
   },
 
   cancel = function() {
+    # No handle if response was cached
     if (!is.null(self$handle)) {
       curl::multi_cancel(self$handle)
     }
@@ -167,4 +233,5 @@ Performance <- R6Class("Performance", public = list(
 
 pool_cancel <- function(pool, perfs) {
   walk(perfs, ~ .x$cancel())
+  curl::multi_run(pool = pool)
 }

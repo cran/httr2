@@ -3,30 +3,35 @@
 #' @description
 #' * `req_body_file()` sends a local file.
 #' * `req_body_raw()` sends a string or raw vector.
-#' * `req_body_json()` sends JSON encoded data.
+#' * `req_body_json()` sends JSON encoded data. Named components of this data
+#'   can later be modified with `req_body_json_modify()`.
 #' * `req_body_form()` sends form encoded data.
 #' * `req_body_multipart()` creates a multi-part body.
 #'
 #' Adding a body to a request will automatically switch the method to POST.
 #'
 #' @inheritParams req_perform
+#' @param type MIME content type. You shouldn't generally need to specify this as
+#'  the defaults are usually pretty good, e.g. `req_body_file()` will guess it
+#'  from the extension of of `path`. Will be ignored if you have manually set
+#'  a `Content-Type` header.
 #' @returns A modified HTTP [request].
 #' @examples
-#' req <- request(example_url()) %>%
+#' req <- request(example_url()) |>
 #'   req_url_path("/post")
 #'
 #' # Most APIs expect small amounts of data in either form or json encoded:
-#' req %>%
-#'   req_body_form(x = "A simple text string") %>%
+#' req |>
+#'   req_body_form(x = "A simple text string") |>
 #'   req_dry_run()
 #'
-#' req %>%
-#'   req_body_json(list(x = "A simple text string")) %>%
+#' req |>
+#'   req_body_json(list(x = "A simple text string")) |>
 #'   req_dry_run()
 #'
 #' # For total control over the body, send a string or raw vector
-#' req %>%
-#'   req_body_raw("A simple text string") %>%
+#' req |>
+#'   req_body_raw("A simple text string") |>
 #'   req_dry_run()
 #'
 #' # There are two main ways that APIs expect entire files
@@ -34,14 +39,14 @@
 #' writeLines(letters[1:6], path)
 #'
 #' # You can send a single file as the body:
-#' req %>%
-#'   req_body_file(path) %>%
+#' req |>
+#'   req_body_file(path) |>
 #'   req_dry_run()
 #'
 #' # You can send multiple files, or a mix of files and data
 #' # with multipart encoding
-#' req %>%
-#'   req_body_multipart(a = curl::form_file(path), b = "some data") %>%
+#' req |>
+#'   req_body_multipart(a = curl::form_file(path), b = "some data") |>
 #'   req_dry_run()
 #' @name req_body
 #' @aliases NULL
@@ -53,7 +58,7 @@ NULL
 req_body_raw <- function(req, body, type = NULL) {
   check_request(req)
   if (!is.raw(body) && !is_string(body)) {
-    abort("`body` must be a raw vector or string")
+    cli::cli_abort("{.arg body} must be a raw vector or string.")
   }
 
   req_body(req, data = body, type = "raw", content_type = type %||% "")
@@ -62,12 +67,10 @@ req_body_raw <- function(req, body, type = NULL) {
 #' @export
 #' @rdname req_body
 #' @param path Path to file to upload.
-#' @param type Content type. For `req_body_file()`, the default
-#'  will will attempt to guess from the extension of `path`.
 req_body_file <- function(req, path, type = NULL) {
   check_request(req)
   if (!file.exists(path)) {
-    abort("`path` does not exist")
+    cli::cli_abort("{.arg path} ({.path {path}}) does not exist.")
   }
 
   # Need to override default content-type "application/x-www-form-urlencoded"
@@ -86,9 +89,12 @@ req_body_json <- function(req, data,
                           auto_unbox = TRUE,
                           digits = 22,
                           null = "null",
+                          type = "application/json",
                           ...) {
   check_request(req)
   check_installed("jsonlite")
+  check_string(type)
+  check_content_type(type, "application/json", "json")
 
   params <- list2(
     auto_unbox = auto_unbox,
@@ -96,23 +102,49 @@ req_body_json <- function(req, data,
     null = null,
     ...
   )
-  req_body(req, data = data, type = "json", params = params)
+  req_body(req, data = data, type = "json", content_type = type, params = params)
 }
 
 #' @export
 #' @rdname req_body
-#' @param ... Name-data pairs used send data in the body. For
-#'   `req_body_form()`, the values must be strings (or things easily
-#'   coerced to string); for `req_body_multipart()` the values must be
-#'   strings or objects produced by [curl::form_file()]/[curl::form_data()].
+req_body_json_modify <- function(req, ...) {
+  check_request(req)
+  if (req$body$type != "json") {
+    cli::cli_abort("Can only be used after {.fn req_body_json")
+  }
+
+  req$body$data <- utils::modifyList(req$body$data, list2(...))
+  req
+}
+
+#' @export
+#' @rdname req_body
+#' @param ... <[`dynamic-dots`][rlang::dyn-dots]> Name-data pairs used to send
+#'   data in the body.
 #'
-#'   For `req_body_json()`, additional arguments passed on to
-#'   [jsonlite::toJSON()].
-req_body_form <- function(.req, ...) {
+#'   * For `req_body_form()`, the values must be strings (or things easily
+#'     coerced to strings);
+#'   * For `req_body_multipart()` the values must be strings or objects
+#'     produced by [curl::form_file()]/[curl::form_data()].
+#'   * For `req_body_json_modify()`, any simple data made from atomic vectors
+#'     and lists.
+#'
+#'   `req_body_json()` uses this argument differently; it takes additional
+#'   arguments passed on to  [jsonlite::toJSON()].
+#' @inheritParams req_url_query
+req_body_form <- function(.req,
+                          ...,
+                          .multi = c("error", "comma", "pipe", "explode")) {
   check_request(.req)
 
-  data <- modify_body_data(.req$body$data, ...)
-  req_body(.req, data = data, type = "form")
+  dots <- multi_dots(..., .multi = .multi)
+  data <- modify_list(.req$body$data, !!!dots)
+  req_body(
+    .req,
+    data = data,
+    type = "form",
+    content_type = "application/x-www-form-urlencoded"
+  )
 }
 
 #' @export
@@ -120,24 +152,19 @@ req_body_form <- function(.req, ...) {
 req_body_multipart <- function(.req, ...) {
   check_request(.req)
 
-  data <- modify_body_data(.req$body$data, ...)
+  data <- modify_list(.req$body$data, ...)
   # data must be character, raw, curl::form_file, or curl::form_data
-  req_body(.req, data = data, type = "multipart")
-}
-
-modify_body_data <- function(data, ...) {
-  dots <- list2(...)
-  if (length(dots) == 1 && !is_named(dots) && is.list(dots[[1]])) {
-    warn("This function longers takes a list, instead supply named arguments in ...", call = caller_env())
-    modify_list(data, !!!dots[[1]])
-  } else {
-    modify_list(data, ...)
-  }
+  req_body(
+    .req,
+    data = data,
+    type = "multipart",
+    content_type = NULL
+  )
 }
 
 # General structure -------------------------------------------------------
 
-req_body <- function(req, data, type = NULL, params = list(), content_type = NULL) {
+req_body <- function(req, data, type, content_type, params = list()) {
   req$body <- list(
     data = data,
     type = type,
@@ -174,20 +201,11 @@ req_body_apply <- function(req) {
   data <- req$body$data
   type <- req$body$type
 
-  # Respect existing Content-Type if set
-  type_idx <- match("content-type", tolower(names(req$headers)))
-  if (!is.na(type_idx)) {
-    content_type <- req$headers[[type_idx]]
-    req$headers <- req$headers[-type_idx]
-  } else {
-    content_type <- req$body$content_type
-  }
-
   if (type == "raw-file") {
     size <- file.info(data)$size
     con <- file(data, "rb")
     # Leaks connection if request doesn't complete
-    read <- function(nbytes, ...) {
+    readfunction <- function(nbytes, ...) {
       if (is.null(con)) {
         raw()
       } else {
@@ -199,31 +217,44 @@ req_body_apply <- function(req) {
         out
       }
     }
+    seekfunction <- function(offset, ...) {
+      if (is.null(con)) {
+        con <<- file(data, "rb")
+      }
+      seek(con, where = offset)
+    }
+
     req <- req_options(req,
       post = TRUE,
-      readfunction = read,
+      readfunction = readfunction,
+      seekfunction = seekfunction,
       postfieldsize_large = size
     )
   } else if (type == "raw") {
     req <- req_body_apply_raw(req, data)
   } else if (type == "json") {
-    content_type <- "application/json"
     json <- exec(jsonlite::toJSON, data, !!!req$body$params)
     req <- req_body_apply_raw(req, json)
   } else if (type == "multipart") {
     data <- unobfuscate(data)
-    content_type <- NULL
     req$fields <- data
   } else if (type == "form") {
     data <- unobfuscate(data)
-    content_type <- "application/x-www-form-urlencoded"
     req <- req_body_apply_raw(req, query_build(data))
   } else {
-    abort("Unsupported request body `type`", .internal = TRUE)
+    cli::cli_abort("Unsupported request body {.arg type}.", .internal = TRUE)
   }
 
-  # Must set header afterwards
+  # Respect existing Content-Type if set
+  type_idx <- match("content-type", tolower(names(req$headers)))
+  if (!is.na(type_idx)) {
+    content_type <- req$headers[[type_idx]]
+    req$headers <- req$headers[-type_idx]
+  } else {
+    content_type <- req$body$content_type
+  }
   req <- req_headers(req, `Content-Type` = content_type)
+
   req
 }
 

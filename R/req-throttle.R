@@ -1,4 +1,4 @@
-#' Throttle a request by automatically adding a delay
+#' Rate limit a request by automatically adding a delay
 #'
 #' @description
 #' Use `req_throttle()` to ensure that repeated calls to [req_perform()] never
@@ -16,7 +16,7 @@
 #' @export
 #' @examples
 #' # Ensure we never send more than 30 requests a minute
-#' req <- request("https://example.com") %>%
+#' req <- request(example_url()) |>
 #'   req_throttle(rate = 30 / 60)
 #'
 #' resp <- req_perform(req)
@@ -25,7 +25,7 @@
 #' throttle_status()
 req_throttle <- function(req, rate, realm = NULL) {
   check_request(req)
-  check_number(rate, "`rate`")
+  check_number_decimal(rate)
 
   delay <- 1 / rate
 
@@ -39,7 +39,7 @@ req_throttle <- function(req, rate, realm = NULL) {
       wait <- delay - (unix_time() - last)
     }
 
-    sys_sleep(wait)
+    sys_sleep(wait, "for throttling delay")
     throttle_touch(realm)
     wait
   }

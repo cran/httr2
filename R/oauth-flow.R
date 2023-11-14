@@ -1,30 +1,52 @@
-oauth_flow_fetch <- function(req) {
+oauth_flow_fetch <- function(req, source, error_call = caller_env()) {
   req <- req_error(req, is_error = ~ FALSE)
   resp <- req_perform(req, error_call = current_call())
+
+  oauth_flow_parse(resp, source, error_call = error_call)
+}
+
+oauth_flow_parse <- function(resp, source, error_call = caller_env()) {
+  withCallingHandlers(
+    body <- oauth_flow_body(resp),
+    error = function(err) {
+      cli::cli_abort(
+        "Failed to parse response from {.arg {source}} OAuth url.",
+        parent = err,
+        call = error_call
+      )
+    }
+  )
+
+  if (has_name(body, "expires_in")) {
+    body$expires_in <- as.numeric(body$expires_in)
+  }
 
   # This is rather more flexible than what the spec requires, and should
   # hopefully be general enough to handle most token endpoints. However,
   # it would still be nice to figure out how to make user extensible,
   # especially since you might be able to give better errors.
-  if (resp_content_type(resp) == "application/json") {
-    body <- resp_body_json(resp)
-
-    if (has_name(body, "expires_in")) {
-      body$expires_in <- as.numeric(body$expires_in)
-    }
-  } else {
-    body <- NULL
-  }
-
-  if ((has_name(body, "access_token") || has_name(body, "device_code")) && resp_status(resp) == 200) {
+  if (has_name(body, "access_token") || has_name(body, "device_code")) {
     body
   } else if (has_name(body, "error")) {
-    oauth_flow_abort(body$error, body$error_description, body$error_uri)
+    oauth_flow_abort(
+      body$error,
+      body$error_description,
+      body$error_uri,
+      error_call = error_call
+    )
   } else {
-    resp_check_status(resp)
-    abort("Failed to process response from 'token' endpoint")
+    cli::cli_abort(
+      c(
+        "Failed to parse response from {.arg {source}} OAuth url.",
+        "*" = "Did not contain {.code access_token}, {.code device_code}, or {.code error} field."
+      ),
+      call = error_call
+    )
   }
+}
 
+oauth_flow_body <- function(resp) {
+  resp_body_json(resp, check_type = NA)
 }
 
 # https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1
@@ -32,15 +54,18 @@ oauth_flow_fetch <- function(req) {
 # https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 #
 # TODO: automatically fill in description from text in RFC?
-oauth_flow_abort <- function(error, description = NULL, uri = NULL) {
-  message <- c(
-    glue("OAuth failure [{error}]"),
-    description,
-    i = if (!is.null(uri)) glue("Learn more at <{uri}>")
-  )
-  abort(
-    message,
+oauth_flow_abort <- function(error,
+                             description = NULL,
+                             uri = NULL,
+                             error_call = caller_env()) {
+  cli::cli_abort(
+    c(
+      "OAuth failure [{error}]",
+      "*" = description,
+      i = if (!is.null(uri)) "Learn more at {.url {uri}}."
+    ),
     code = error,
-    class = c(glue("httr2_oauth_{error}"), "httr2_oauth")
+    class = c(glue("httr2_oauth_{error}"), "httr2_oauth"),
+    call = error_call
   )
 }

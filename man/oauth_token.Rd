@@ -37,6 +37,10 @@ returned from the access token endpoint.
 }
 \examples{
 oauth_token("abcdef")
-oauth_token("abcdef", expires_in = Sys.time() + 3600)
+oauth_token("abcdef", expires_in = 3600)
 oauth_token("abcdef", refresh_token = "ghijkl")
+}
+\seealso{
+\code{\link[=oauth_token_cached]{oauth_token_cached()}} to use the token cache with a specified
+OAuth flow.
 }

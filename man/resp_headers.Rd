@@ -8,7 +8,7 @@
 \usage{
 resp_headers(resp, filter = NULL)
 
-resp_header(resp, header)
+resp_header(resp, header, default = NULL)
 
 resp_header_exists(resp, header)
 }
@@ -19,6 +19,8 @@ resp_header_exists(resp, header)
 \code{NULL}, the default, returns all headers.}
 
 \item{header}{Header name (case insensitive)}
+
+\item{default}{Default value to use if header doesn't exist.}
 }
 \value{
 \itemize{
@@ -35,15 +37,15 @@ resp_header_exists(resp, header)
 }
 }
 \examples{
-resp <- request("https://httr2.r-lib.org") \%>\% req_perform()
-resp \%>\% resp_headers()
-resp \%>\% resp_headers("x-")
+resp <- request("https://httr2.r-lib.org") |> req_perform()
+resp |> resp_headers()
+resp |> resp_headers("x-")
 
-resp \%>\% resp_header_exists("server")
-resp \%>\% resp_header("server")
+resp |> resp_header_exists("server")
+resp |> resp_header("server")
 # Headers are case insensitive
-resp \%>\% resp_header("SERVER")
+resp |> resp_header("SERVER")
 
 # Returns NULL if header doesn't exist
-resp \%>\% resp_header("this-header-doesnt-exist")
+resp |> resp_header("this-header-doesnt-exist")
 }

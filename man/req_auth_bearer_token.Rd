@@ -22,7 +22,7 @@ password). They are usually produced by some large authentication scheme
 directly.
 }
 \examples{
-req <- request("http://example.com") \%>\% req_auth_bearer_token("sdaljsdf093lkfs")
+req <- request("http://example.com") |> req_auth_bearer_token("sdaljsdf093lkfs")
 req
 
 # httr2 does its best to redact the Authorization header so that you don't
@@ -30,6 +30,6 @@ req
 print(req, redact_headers = FALSE)
 }
 \seealso{
-\href{https://datatracker.ietf.org/doc/html/rfc6750}{RFC750}
-The OAuth 2.0 Authorization Framework: Bearer Token Usage
+See \href{https://datatracker.ietf.org/doc/html/rfc6750}{RFC 6750} for more details about bearer token usage
+with OAuth 2.0.
 }

@@ -5,8 +5,8 @@
 #' httr2.
 #'
 #' @inheritParams req_headers
-#' @param ... Name-value pairs. The name should be a valid curl option,
-#'   as found in [curl::curl_options()].
+#' @param ... <[`dynamic-dots`][rlang::dyn-dots]> Name-value pairs. The name
+#'   should be a valid curl option, as found in [curl::curl_options()].
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
@@ -15,7 +15,7 @@
 #' # turn off SSL verification. This is generally a bad idea so httr2 doesn't
 #' # provide a convenient wrapper, but if you really know what you're doing
 #' # you can still access this libcurl option:
-#' req <- request("https://example.com") %>%
+#' req <- request("https://example.com") |>
 #'   req_options(ssl_verifypeer = 0)
 req_options <- function(.req, ...) {
   check_request(.req)
@@ -36,14 +36,14 @@ req_options <- function(.req, ...) {
 #' @export
 #' @examples
 #' # Default user-agent:
-#' request("http://example.com") %>% req_dry_run()
+#' request("http://example.com") |> req_dry_run()
 #'
-#' request("http://example.com") %>% req_user_agent("MyString") %>% req_dry_run()
+#' request("http://example.com") |> req_user_agent("MyString") |> req_dry_run()
 #'
 #' # If you're wrapping in an API in a package, it's polite to set the
 #' # user agent to identify your package.
-#' request("http://example.com") %>%
-#'   req_user_agent("MyPackage (http://mypackage.com)") %>%
+#' request("http://example.com") |>
+#'   req_user_agent("MyPackage (http://mypackage.com)") |>
 #'   req_dry_run()
 req_user_agent <- function(req, string = NULL) {
   check_request(req)
@@ -56,7 +56,7 @@ req_user_agent <- function(req, string = NULL) {
     )
     string <- paste0(names(versions), "/", versions, collapse = " ")
   } else {
-    check_string(string, "`string`")
+    check_string(string)
   }
 
   req_options(req, useragent = string)
@@ -72,14 +72,14 @@ req_user_agent <- function(req, string = NULL) {
 #' @export
 #' @examples
 #' # Give up after at most 10 seconds
-#' request("http://example.com") %>% req_timeout(10)
+#' request("http://example.com") |> req_timeout(10)
 req_timeout <- function(req, seconds) {
   check_request(req)
-  check_number(seconds, "`seconds`")
-
+  check_number_decimal(seconds)
   if (seconds < 0.001) {
-    abort("`timeout` must be >1 ms")
+    cli::cli_abort("{.arg seconds} must be >1 ms.")
   }
+
   req_options(req, timeout_ms = seconds * 1000)
 }
 
@@ -94,8 +94,8 @@ req_timeout <- function(req, seconds) {
 #' @examples
 #' # Proxy from https://www.proxynova.com/proxy-server-list/
 #' \dontrun{
-#' request("http://hadley.nz") %>%
-#'   req_proxy("20.116.130.70", 3128) %>%
+#' request("http://hadley.nz") |>
+#'   req_proxy("20.116.130.70", 3128) |>
 #'   req_perform()
 #' }
 #' @export
@@ -107,11 +107,7 @@ req_proxy <- function(req, url, port = NULL, username = NULL, password = NULL, a
     proxyuserpwd <- NULL
   }
 
-  if (!is.null(port)) {
-    if (!is_integerish(port)) {
-      abort("`port` must be a number")
-    }
-  }
+  check_number_whole(port, allow_null = TRUE)
 
   req_options(
     req,
@@ -130,10 +126,10 @@ req_proxy <- function(req, url, port = NULL, username = NULL, password = NULL, a
 #' different components of the HTTP requests and responses:
 #'
 #' * `* ` informative curl messages
-#' * `<-` request headers
-#' * `<<` request body
-#' * `->` response headers
-#' * `>>` response body
+#' * `->` request headers
+#' * `>>` request body
+#' * `<-` response headers
+#' * `<<` response body
 #'
 #' @inheritParams req_perform
 #' @param header_req,header_resp Show request/response headers?
@@ -153,12 +149,12 @@ req_proxy <- function(req, url, port = NULL, username = NULL, password = NULL, a
 #' @examples
 #' # Use `req_verbose()` to see the headers that are sent back and forth when
 #' # making a request
-#' resp <- request("https://httr2.r-lib.org") %>%
-#'   req_verbose() %>%
+#' resp <- request("https://httr2.r-lib.org") |>
+#'   req_verbose() |>
 #'   req_perform()
 #'
 #' # Or use one of the convenient shortcuts:
-#' resp <- request("https://httr2.r-lib.org") %>%
+#' resp <- request("https://httr2.r-lib.org") |>
 #'   req_perform(verbosity = 1)
 req_verbose <- function(req,
                         header_req = TRUE,
@@ -169,11 +165,12 @@ req_verbose <- function(req,
                         redact_headers = TRUE) {
   check_request(req)
 
+  to_redact <- attr(req$headers, "redact")
   debug <- function(type, msg) {
     switch(type + 1,
       text =       if (info)        verbose_message("*  ", msg),
       headerOut =  if (header_resp) verbose_header("<- ", msg),
-      headerIn =   if (header_req)  verbose_header("-> ", msg, redact_headers),
+      headerIn =   if (header_req)  verbose_header("-> ", msg, redact_headers, to_redact = to_redact),
       dataOut =    if (body_resp)   verbose_message("<< ", msg),
       dataIn =     if (body_req)    verbose_message(">> ", msg)
     )
@@ -197,13 +194,13 @@ verbose_message <- function(prefix, x) {
   cli::cat_line(prefix, lines)
 }
 
-verbose_header <- function(prefix, x, redact = TRUE) {
+verbose_header <- function(prefix, x, redact = TRUE, to_redact = NULL) {
   x <- readBin(x, character())
   lines <- unlist(strsplit(x, "\r?\n", useBytes = TRUE))
 
   for (line in lines) {
     if (grepl(":", line, fixed = TRUE)) {
-      header <- headers_redact(as_headers(line), redact)
+      header <- headers_redact(as_headers(line), redact, to_redact = to_redact)
       cli::cat_line(prefix, cli::style_bold(names(header)), ": ", header)
     } else {
       cli::cat_line(prefix, line)

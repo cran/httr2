@@ -1,4 +1,4 @@
-# respinse has basic print method
+# response has basic print method
 
     Code
       response(200)
@@ -6,7 +6,7 @@
       <httr2_response>
       GET https://example.com
       Status: 200 OK
-      Body: Empty
+      Body: None
     Code
       response(200, headers = "Content-Type: text/html")
     Message
@@ -14,7 +14,7 @@
       GET https://example.com
       Status: 200 OK
       Content-Type: text/html
-      Body: Empty
+      Body: None
     Code
       response(200, body = charToRaw("abcdef"))
     Message
@@ -23,18 +23,25 @@
       Status: 200 OK
       Body: In memory (6 bytes)
     Code
-      response(200, body = new_path("/test"))
+      response(200, body = new_path("path-empty"))
     Message
       <httr2_response>
       GET https://example.com
       Status: 200 OK
-      Body: On disk 'body'
+      Body: None
+    Code
+      response(200, body = new_path("path-content"))
+    Message
+      <httr2_response>
+      GET https://example.com
+      Status: 200 OK
+      Body: On disk 'path-content' (15 bytes)
 
 # check_response produces helpful error
 
     Code
       check_response(1)
     Condition
-      Error in `check_response()`:
-      ! `resp` must be an HTTP response object
+      Error:
+      ! `1` must be an HTTP response object, not the number 1.
 

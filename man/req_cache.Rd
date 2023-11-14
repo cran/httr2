@@ -4,12 +4,24 @@
 \alias{req_cache}
 \title{Automatically cache requests}
 \usage{
-req_cache(req, path, use_on_error = FALSE, debug = FALSE)
+req_cache(
+  req,
+  path,
+  use_on_error = FALSE,
+  debug = FALSE,
+  max_age = Inf,
+  max_n = Inf,
+  max_size = 1024^3
+)
 }
 \arguments{
 \item{req}{A \link{request}.}
 
-\item{path}{Path to cache directory}
+\item{path}{Path to cache directory.
+
+httr2 doesn't provide helpers to manage the cache, but if you want to
+empty it, you can use something like
+\code{unlink(dir(cache_path, full.names = TRUE))}.}
 
 \item{use_on_error}{If the request errors, and there's a cache response,
 should \code{req_perform()} return that instead of generating an error?}
@@ -17,6 +29,18 @@ should \code{req_perform()} return that instead of generating an error?}
 \item{debug}{When \code{TRUE} will emit useful messages telling you about
 cache hits and misses. This can be helpful to understand whether or
 not caching is actually doing anything for your use case.}
+
+\item{max_n, max_age, max_size}{Automatically prune the cache by specifying
+one or more of:
+\itemize{
+\item \code{max_age}: to delete files older than this number of seconds.
+\item \code{max_n}: to delete files (from oldest to newest) to preserve at
+most this many files.
+\item \code{max_size}: to delete files (from oldest to newest) to preserve at
+most this many bytes.
+}
+
+The cache pruning is performed at most once per minute.}
 }
 \value{
 A modified HTTP \link{request}.
@@ -42,11 +66,11 @@ url <- paste0(
   "master/inst/extdata/penguins.csv"
 )
 # Here I set debug = TRUE so you can see what's happening
-req <- request(url) \%>\% req_cache(tempdir(), debug = TRUE)
+req <- request(url) |> req_cache(tempdir(), debug = TRUE)
 
 # First request downloads the data
-resp <- req \%>\% req_perform()
+resp <- req |> req_perform()
 
 # Second request retrieves it from the cache
-resp <- req \%>\% req_perform()
+resp <- req |> req_perform()
 }

@@ -13,10 +13,10 @@
 #' * 1xx are handled internally by curl.
 #' * 3xx redirects are automatically followed. You will only see them if you
 #'   have deliberately suppressed redirects with
-#'   `req %>% req_options(followlocation = FALSE)`.
+#'   `req |> req_options(followlocation = FALSE)`.
 #' * 4xx client and 5xx server errors are automatically turned into R errors.
 #'   You can stop them from being turned into R errors with [req_error()],
-#'   e.g. `req %>% req_error(is_error = ~ FALSE)`.
+#'   e.g. `req |> req_error(is_error = ~ FALSE)`.
 #'
 #' @return
 #' * `resp_status()` returns a scalar integer
@@ -29,9 +29,9 @@
 #' @examples
 #' # An HTTP status code you're unlikely to see in the wild:
 #' resp <- response(418)
-#' resp %>% resp_is_error()
-#' resp %>% resp_status()
-#' resp %>% resp_status_desc()
+#' resp |> resp_is_error()
+#' resp |> resp_status()
+#' resp |> resp_status_desc()
 resp_status <- function(resp) {
   check_response(resp)
   resp$status_code
@@ -66,11 +66,11 @@ resp_check_status <- function(resp, info = NULL, error_call = caller_env()) {
   if (!resp_is_error(resp)) {
     invisible(resp)
   } else {
-    resp_abort(resp, info, call = error_call)
+    resp_abort(resp, resp$request, info, call = error_call)
   }
 }
 
-resp_abort <- function(resp, info = NULL, call = caller_env()) {
+resp_abort <- function(resp, req, info = NULL, call = caller_env()) {
   status <- resp_status(resp)
   desc <- resp_status_desc(resp)
   message <- glue("HTTP {status} {desc}.")
@@ -79,7 +79,8 @@ resp_abort <- function(resp, info = NULL, call = caller_env()) {
     c(message, resp_auth_message(resp), info),
     status = status,
     resp = resp,
-    class = c(glue("httr2_http_{status}"), "httr2_http"),
+    class = c(glue("httr2_http_{status}"), "httr2_http", "httr2_error"),
+    request = req,
     call = call
   )
 }

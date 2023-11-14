@@ -3,8 +3,8 @@
     Code
       as_headers(1)
     Condition
-      Error in `as_headers()`:
-      ! `headers` must be a list, character vector, or raw
+      Error:
+      ! `headers` must be a list, character vector, or raw.
 
 # has nice print method
 
@@ -26,11 +26,11 @@
     Code
       new_headers(1)
     Condition
-      Error in `new_headers()`:
-      ! `x` must be a list
+      Error:
+      ! `x` must be a list.
     Code
       new_headers(list(1))
     Condition
-      Error in `new_headers()`:
-      ! All elements of `x` must be named
+      Error:
+      ! All elements of `x` must be named.
 
