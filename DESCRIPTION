@@ -1,6 +1,6 @@
 Package: httr2
 Title: Perform HTTP Requests and Process the Responses
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(
     person("Hadley", "Wickham", , "hadley@rstudio.com", role = c("aut", "cre")),
     person("RStudio", role = c("cph", "fnd")),
@@ -23,12 +23,12 @@ VignetteBuilder: knitr
 Config/Needs/website: tidyverse/tidytemplate
 Config/testthat/edition: 3
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 NeedsCompilation: no
-Packaged: 2023-11-13 16:55:37 UTC; hadleywickham
+Packaged: 2024-04-01 18:58:33 UTC; hadleywickham
 Author: Hadley Wickham [aut, cre],
   RStudio [cph, fnd],
   Maximilian Girlich [ctb]
 Maintainer: Hadley Wickham <hadley@rstudio.com>
 Repository: CRAN
-Date/Publication: 2023-11-14 13:53:23 UTC
+Date/Publication: 2024-04-01 19:30:02 UTC
