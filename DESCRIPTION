@@ -1,9 +1,9 @@
 Package: httr2
 Title: Perform HTTP Requests and Process the Responses
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: c(
-    person("Hadley", "Wickham", , "hadley@rstudio.com", role = c("aut", "cre")),
-    person("RStudio", role = c("cph", "fnd")),
+    person("Hadley", "Wickham", , "hadley@posit.co", role = c("aut", "cre")),
+    person("Posit Software, PBC", role = c("cph", "fnd")),
     person("Maximilian", "Girlich", role = "ctb")
   )
 Description: Tools for creating and modifying HTTP requests, then
@@ -13,7 +13,7 @@ Description: Tools for creating and modifying HTTP requests, then
 License: MIT + file LICENSE
 URL: https://httr2.r-lib.org, https://github.com/r-lib/httr2
 BugReports: https://github.com/r-lib/httr2/issues
-Depends: R (>= 3.6)
+Depends: R (>= 4.0)
 Imports: cli (>= 3.0.0), curl (>= 5.1.0), glue, lifecycle, magrittr,
         openssl, R6, rappdirs, rlang (>= 1.1.0), vctrs (>= 0.6.3),
         withr
@@ -22,13 +22,14 @@ Suggests: askpass, bench, clipr, covr, docopt, httpuv, jose, jsonlite,
 VignetteBuilder: knitr
 Config/Needs/website: tidyverse/tidytemplate
 Config/testthat/edition: 3
+Config/testthat/parallel: true
 Encoding: UTF-8
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2024-04-01 18:58:33 UTC; hadleywickham
+Packaged: 2024-07-15 20:48:57 UTC; hadleywickham
 Author: Hadley Wickham [aut, cre],
-  RStudio [cph, fnd],
+  Posit Software, PBC [cph, fnd],
   Maximilian Girlich [ctb]
-Maintainer: Hadley Wickham <hadley@rstudio.com>
+Maintainer: Hadley Wickham <hadley@posit.co>
 Repository: CRAN
-Date/Publication: 2024-04-01 19:30:02 UTC
+Date/Publication: 2024-07-16 09:30:02 UTC
