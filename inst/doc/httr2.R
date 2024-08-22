@@ -1,10 +1,11 @@
 ## ----include = FALSE----------------------------------------------------------
-has_pipe <- getRversion() >= "4.1.0"
+# needs pipe & avoids error = TRUE problem in 4.3.0
+run_code <- getRversion() >= "4.4.0"
 
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = has_pipe
+  eval = run_code
 )
 
 ## ----setup--------------------------------------------------------------------
@@ -18,30 +19,30 @@ req
 req |> req_dry_run()
 
 ## -----------------------------------------------------------------------------
-port <- if (has_pipe) paste0("`", url_parse(example_url())$port, "`") else "e.g. `1234`"
+port <- if (run_code) paste0("`", url_parse(example_url())$port, "`") else "e.g. `1234`"
 
 ## -----------------------------------------------------------------------------
 req |>
   req_headers(
-    Name = "Hadley", 
-    `Shoe-Size` = "11", 
+    Name = "Hadley",
+    `Shoe-Size` = "11",
     Accept = "application/json"
-  ) |> 
+  ) |>
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
 req |>
-  req_body_json(list(x = 1, y = "a")) |> 
+  req_body_json(list(x = 1, y = "a")) |>
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
 req |>
-  req_body_form(x = "1", y = "a") |> 
+  req_body_form(x = "1", y = "a") |>
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
 req |>
-  req_body_multipart(x = "1", y = "a") |> 
+  req_body_multipart(x = "1", y = "a") |>
   req_dry_run()
 
 ## -----------------------------------------------------------------------------
@@ -67,11 +68,11 @@ resp |> resp_header("ConTEnT-LeNgTH")
 resp |> resp_body_json() |> str()
 
 ## ----error = TRUE-------------------------------------------------------------
-request(example_url()) |> 
-  req_url_path("/status/404") |> 
+request(example_url()) |>
+  req_url_path("/status/404") |>
   req_perform()
 
-request(example_url()) |> 
-  req_url_path("/status/500") |> 
+request(example_url()) |>
+  req_url_path("/status/500") |>
   req_perform()
 
