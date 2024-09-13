@@ -13,7 +13,7 @@
 #' check with `check_type = FALSE`. These two functions also cache the parsed
 #' object so the second and subsequent calls are low-cost.
 #'
-#' @param resp A response object.
+#' @inheritParams resp_headers
 #' @returns
 #' * `resp_body_raw()` returns a raw vector.
 #' * `resp_body_string()` returns a string.
@@ -36,11 +36,17 @@ resp_body_raw <- function(resp) {
 
   if (!resp_has_body(resp)) {
     cli::cli_abort("Can't retrieve empty body.")
-  } else if (is_path(resp$body)) {
-    readBin(resp$body, "raw", file.size(resp$body))
-  } else {
-    resp$body
   }
+
+  switch(resp_body_type(resp),
+    disk = readBin(resp$body, "raw", file.size(resp$body)),
+    memory = resp$body,
+    stream = {
+      out <- read_con(resp$body)
+      close(resp)
+      out
+    }
+  )
 }
 
 #' @rdname resp_body_raw
@@ -48,10 +54,20 @@ resp_body_raw <- function(resp) {
 resp_has_body <- function(resp) {
   check_response(resp)
 
+  switch(resp_body_type(resp),
+    disk = file.size(resp$body) > 0,
+    memory = length(resp$body) > 0,
+    stream = isValid(resp$body)
+  )
+}
+
+resp_body_type <- function(resp) {
   if (is_path(resp$body)) {
-    file.size(resp$body) > 0
+    "disk"
+  } else if (inherits(resp$body, "connection")) {
+    "stream"
   } else {
-    length(resp$body) > 0
+    "memory"
   }
 }
 
@@ -109,7 +125,8 @@ resp_body_html <- function(resp, check_type = TRUE, ...) {
     check_type = check_type
   )
 
-  xml2::read_html(resp$body, ...)
+  body <- resp_body_raw(resp)
+  xml2::read_html(body, ...)
 }
 
 #' @rdname resp_body_raw
@@ -130,7 +147,8 @@ resp_body_xml <- function(resp, check_type = TRUE, ...) {
     check_type = check_type
   )
 
-  resp$cache[[key]] <- xml2::read_xml(resp$body, ...)
+  body <- resp_body_raw(resp)
+  resp$cache[[key]] <- xml2::read_xml(body, ...)
   resp$cache[[key]]
 }
 

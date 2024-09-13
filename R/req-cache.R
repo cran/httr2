@@ -15,7 +15,12 @@
 #' [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching).
 #'
 #' @inheritParams req_perform
-#' @param path Path to cache directory.
+#' @param path Path to cache directory. Will be created automatically if it
+#'   does not exist.
+#'
+#'   For quick and easy caching within a session, you can use `tempfile()`.
+#'   To cache requests within a package, you can use something like
+#'   `file.path(tools::R_user_dir("pkgdown", "cache"), "httr2")`.
 #'
 #'   httr2 doesn't provide helpers to manage the cache, but if you want to
 #'   empty it, you can use something like
@@ -114,7 +119,9 @@ cache_get <- function(req) {
 }
 
 cache_set <- function(req, resp) {
-  if (is_path(resp$body)) {
+  signal("", "httr2_cache_save")
+
+  if (resp_body_type(resp) == "disk") {
     body_path <- req_cache_path(req, ".body")
     file.copy(resp$body, body_path, overwrite = TRUE)
     resp$body <- new_path(body_path)
@@ -174,7 +181,7 @@ cache_prune_files <- function(info, to_remove, why, debug = TRUE) {
 # Hooks for req_perform -----------------------------------------------------
 
 # Can return request or response
-cache_pre_fetch <- function(req) {
+cache_pre_fetch <- function(req, path = NULL) {
   if (!cache_active(req)) {
     return(req)
   }
@@ -192,7 +199,10 @@ cache_pre_fetch <- function(req) {
   if (!is.na(info$expires) && info$expires >= Sys.time()) {
     signal("", "httr2_cache_cached")
     if (debug) cli::cli_text("Cached value is fresh; using response from cache")
-    cached_resp
+
+    resp <- cached_resp
+    resp$body <- cache_body(cached_resp, path)
+    resp
   } else {
     if (debug) cli::cli_text("Cached value is stale; checking for updates")
     req_headers(req,
@@ -222,14 +232,17 @@ cache_post_fetch <- function(req, resp, path = NULL) {
     signal("", "httr2_cache_not_modified")
     if (debug) cli::cli_text("Cached value still ok; retrieving body from cache")
 
-    # Replace body with cached result
-    resp$body <- cache_body(cached_resp, path)
     # Combine headers
     resp$headers <- cache_headers(cached_resp, resp)
+    # Replace body with cached result
+    resp$body <- cache_body(cached_resp, path)
+
+    # Re-cache, so we get any new headers
+    cache_set(req, resp)
     resp
   } else if (resp_is_cacheable(resp)) {
-    signal("", "httr2_cache_save")
     if (debug) cli::cli_text("Saving response to cache {.val {hash(req$url)}}")
+
     cache_set(req, resp)
     resp
   } else {
@@ -241,16 +254,16 @@ cache_body <- function(cached_resp, path = NULL) {
   check_response(cached_resp)
 
   body <- cached_resp$body
-
   if (is.null(path)) {
     return(body)
   }
 
-  if (is_path(body)) {
-    file.copy(body, path, overwrite = TRUE)
-  } else {
-    writeBin(body, path)
-  }
+  switch(resp_body_type(cached_resp),
+    disk = file.copy(body, path, overwrite = TRUE),
+    memory = writeBin(body, path),
+    stream = cli::cli_abort("Invalid body type", .internal = TRUE)
+  )
+
   new_path(path)
 }
 
@@ -268,6 +281,10 @@ resp_is_cacheable <- function(resp, control = NULL) {
   }
 
   if (resp_status(resp) != 200L) {
+    return(FALSE)
+  }
+
+  if (resp_body_type(resp) == "stream") {
     return(FALSE)
   }
 

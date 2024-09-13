@@ -5,7 +5,8 @@ run_code <- getRversion() >= "4.4.0"
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = run_code
+  eval = run_code,
+  purl = run_code
 )
 
 ## ----setup--------------------------------------------------------------------

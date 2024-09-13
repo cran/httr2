@@ -29,8 +29,30 @@ test_that("respects httr verbose config", {
   expect_equal(httr2_verbosity(), 1)
 })
 
-test_that("can suppress progress bar", {
-  withr::local_options(httr2_progress = FALSE)
+test_that("progress bar suppressed in tests", {
+  expect_snapshot(sys_sleep(0.1, "in test"))
+})
 
-  expect_snapshot(sys_sleep(0.1, "for test"))
+
+test_that("has a working slice", {
+  x <- letters[1:5]
+  expect_identical(slice(x), x)
+  expect_identical(slice(x, 1, length(x) + 1), x)
+
+  # start is inclusive, end is exclusive
+  expect_identical(slice(x, 1, length(x)), head(x, -1))
+  # zero-length slices are fine
+  expect_identical(slice(x, 1, 1), character())
+  # starting off the end is fine
+  expect_identical(slice(x, length(x) + 1), character())
+  expect_identical(slice(x, length(x) + 1, length(x) + 1), character())
+  # slicing zero-length is fine
+  expect_identical(slice(character()), character())
+
+  # out of bounds
+  expect_error(slice(x, 0, 1))
+  expect_error(slice(x, length(x) + 2))
+  expect_error(slice(x, end = length(x) + 2))
+  # end too small relative to start
+  expect_error(slice(x, 2, 1))
 })

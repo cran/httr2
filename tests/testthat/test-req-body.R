@@ -1,8 +1,9 @@
 test_that("can send file", {
-  skip_on_os("windows") # fails due to line ending difference
-
-  path <- tempfile()
-  writeLines("this is a test", path)
+  path <- withr::local_tempfile()
+  # curl requests in 64kb chunks so this will hopefully illustrate
+  # any subtle problems
+  x <- strrep("x", 128 * 1024)
+  writeChar(x, path, nchar(x))
 
   resp <- request_test("/post") %>%
     req_body_file(path, type = "text/plain") %>%
@@ -10,7 +11,7 @@ test_that("can send file", {
 
   json <- resp_body_json(resp)
   expect_equal(json$headers$`Content-Type`, "text/plain")
-  expect_equal(json$data, "this is a test\n")
+  expect_equal(json$data, x)
 })
 
 test_that("can send file with redirect", {
@@ -157,6 +158,9 @@ test_that("no issues with partial name matching", {
     req_body_multipart(d = "some data")
 
   expect_named(req$body$data, "d")
+})
 
-
+test_that("can't change body type", {
+  req <- request("http://example.com") %>% req_body_raw(raw(1))
+  expect_snapshot(req %>% req_body_json(list(x = 1)), error = TRUE)
 })

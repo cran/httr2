@@ -39,7 +39,6 @@ req_perform_stream <- function(req,
                                round = c("byte", "line")) {
   check_request(req)
 
-  handle <- req_handle(req)
   check_function(callback)
   check_number_decimal(timeout_sec, min = 0)
   check_number_decimal(buffer_kb, min = 0)
@@ -47,27 +46,9 @@ req_perform_stream <- function(req,
 
   stop_time <- Sys.time() + timeout_sec
 
-  stream <- curl::curl(req$url, handle = handle)
-  open(stream, "rbf")
+  resp <- req_perform_connection(req)
+  stream <- resp$body
   withr::defer(close(stream))
-
-  res <- curl::handle_data(handle)
-  the$last_request <- req
-
-  # Return early if there's a problem
-  resp <- new_response(
-    method = req_method_get(req),
-    url = res$url,
-    status_code = res$status_code,
-    headers = as_headers(res$headers),
-    body = NULL,
-    request = req
-  )
-  if (error_is_error(req, resp)) {
-    resp$body <- read_con(stream)
-    the$last_response <- resp
-    handle_resp(req, resp)
-  }
 
   continue <- TRUE
   incomplete <- TRUE
@@ -92,9 +73,13 @@ req_perform_stream <- function(req,
     callback(buf)
   }
 
+  # We're done streaming so convert to bodiless response
+  resp$body <- raw()
   the$last_response <- resp
   resp
 }
+
+# Helpers ----------------------------------------------------------------------
 
 as_round_function <- function(round = c("byte", "line"),
                               error_call = caller_env()) {
@@ -112,20 +97,6 @@ as_round_function <- function(round = c("byte", "line"),
       '{.arg round} must be "byte", "line" or a function.',
       call = error_call
     )
-  }
-}
-
-read_con <- function(con, buffer = 32 * 1024) {
-  bytes <- raw()
-  repeat {
-    new <- readBin(con, "raw", n = buffer)
-    if (length(new) == 0) break
-    bytes <- c(bytes, new)
-  }
-  if (length(bytes) == 0) {
-    NULL
-  } else {
-    bytes
   }
 }
 

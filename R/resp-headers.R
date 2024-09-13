@@ -5,7 +5,7 @@
 #' * `resp_header()` retrieves a single header.
 #' * `resp_header_exists()` checks if a header is present.
 #'
-#' @param resp An HTTP response object, as created by [req_perform()].
+#' @param resp A httr2 [response] object, created by [req_perform()].
 #' @param filter A regular expression used to filter the header names.
 #'   `NULL`, the default, returns all headers.
 #' @return
@@ -134,6 +134,8 @@ resp_encoding <- function(resp) {
 #' resp <- response(headers = "Retry-After: Mon, 20 Sep 2025 21:44:05 UTC")
 #' resp |> resp_retry_after()
 resp_retry_after <- function(resp) {
+  check_response(resp)
+
   # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
   val <- resp_header(resp, "Retry-After")
   if (is.null(val)) {
