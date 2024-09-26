@@ -1,7 +1,7 @@
-64422e1fcb04728e00e1f51497f160ff *DESCRIPTION
+02ca4ac1e3dd9ea5d2413e8906b28436 *DESCRIPTION
 67c32986371e772e798cc5d9f2dcc504 *LICENSE
 1b74cfa7d77181454975ccb60cc0fcf8 *NAMESPACE
-9484a776b0cb0a90b4b6454f53034f7c *NEWS.md
+d21ff8693c549d1da05ba0a3adf2d4e4 *NEWS.md
 1658ee72d6e44a999ae79903bcd25229 *R/content-type.R
 cbe53509d83cc49aa75d4d51dc2e1ee6 *R/curl.R
 3dd7ea652be40280bb2f0727674c88b3 *R/headers.R
@@ -13,7 +13,7 @@ c40f882046a958444c6058a9e2cb9a3b *R/import-standalone-types-check.R
 6a481f63dd4378d148d3fead8e0f170e *R/iterate-responses.R
 2d943bdad354e34cbd4a45100b0d1e6b *R/iterate.R
 b9d534f99dcda91551c3fcd746e2a445 *R/jwt.R
-eeb3d5d987f80ec1ab3a286cf63764f5 *R/multi-req.R
+097c58ecf122c681e207742d2f523ea8 *R/multi-req.R
 b1ae849ccaeae58d217eed06275a9b16 *R/oauth-client.R
 d9db7d2520133a6ac3aeac7f9119ae70 *R/oauth-flow-auth-code.R
 a83498a469807c9f97bb6ccc4ea35a1a *R/oauth-flow-client-credentials.R
@@ -69,7 +69,7 @@ b547518249e0da4528616c8ed2382036 *configure
 757ef8281ef2a1ebcbcc8235aeee2d0e *configure.win
 5cc4d22264fb5121cdf2e6a1603dd7cc *inst/doc/httr2.R
 5cc7d3c34b6a4fcfde1bde0e741c7823 *inst/doc/httr2.Rmd
-6432b7340f6d204844cc98c81c2ae146 *inst/doc/httr2.html
+a771beb035eb6fe15ad8d7329d56f811 *inst/doc/httr2.html
 8ac6a7b7aac968e8a0e93c58049261ef *man/curl_translate.Rd
 fc06ec6c9f17492418496a7875111a55 *man/example_url.Rd
 a1cbaf3f328e8d74e747faacf640c7fc *man/figures/lifecycle-archived.svg
@@ -198,7 +198,7 @@ bb05f379e71b020064f3b0db5a23922f *tests/testthat/test-headers.R
 5be02d74f062de3487e54c8d4bfa25d7 *tests/testthat/test-iterate-helpers.R
 6d3ec8a9144133090eb42a027c84d50b *tests/testthat/test-iterate-responses.R
 6c02a6d5d34e2b3c1c33906f40a90bc5 *tests/testthat/test-iterate.R
-e78894ac6477facc7895b086fc424617 *tests/testthat/test-multi-req.R
+6d1d3570ef8748497c45a4ddd788ac5a *tests/testthat/test-multi-req.R
 da1c04bca53e199b761be5b06efde1a8 *tests/testthat/test-oauth-client.R
 b9f2d0c46a1f0c0c6cbc35c3538c3845 *tests/testthat/test-oauth-flow-auth-code.R
 29b4f80b4448eb91aa5e19966bd890b6 *tests/testthat/test-oauth-flow-jwt-google.rds
@@ -217,11 +217,11 @@ dcdfc9e77090746808e26c21ec431463 *tests/testthat/test-req-cache.R
 abe3ec676219640db627c485562b04c3 *tests/testthat/test-req-method.R
 1fc31f502e426bc8f24fd38551bb23b5 *tests/testthat/test-req-mock.R
 da98932f68102ee2b1cf07eca3ae614b *tests/testthat/test-req-options.R
-00b2a313e3875866886c6564f61637d6 *tests/testthat/test-req-perform-connection.R
+0ae9ae926545591c692f33c9c46c96f0 *tests/testthat/test-req-perform-connection.R
 ad2542aa4f1a88d7935bbe19d410741b *tests/testthat/test-req-perform-stream.R
-bb400201e464eb90c1d8b60e70b0e98f *tests/testthat/test-req-perform.R
+3ab0d605a58310f37ba655704ce22a36 *tests/testthat/test-req-perform.R
 8e5b70954049fa379b900743857d68d0 *tests/testthat/test-req-policy.R
-346bf4d24b18b3861433c517f83432ef *tests/testthat/test-req-promise.R
+3472e5721d31d5e8ae6f74370d742636 *tests/testthat/test-req-promise.R
 c3c7553bc1472f7138b7cc4d9b59b01f *tests/testthat/test-req-retries.R
 d8ebf8812ec156c0c00443c71d6e65e8 *tests/testthat/test-req-template.R
 7f8382c81e7208a3adbaf6e0beb58946 *tests/testthat/test-req-throttle.R

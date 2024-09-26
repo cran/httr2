@@ -1,6 +1,6 @@
 Package: httr2
 Title: Perform HTTP Requests and Process the Responses
-Version: 1.0.4
+Version: 1.0.5
 Authors@R: c(
     person("Hadley", "Wickham", , "hadley@posit.co", role = c("aut", "cre")),
     person("Posit Software, PBC", role = c("cph", "fnd")),
@@ -28,10 +28,10 @@ Config/testthat/start-first: resp-stream, req-perform
 Encoding: UTF-8
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2024-09-13 19:41:35 UTC; hadleywickham
+Packaged: 2024-09-24 17:18:26 UTC; hadleywickham
 Author: Hadley Wickham [aut, cre],
   Posit Software, PBC [cph, fnd],
   Maximilian Girlich [ctb]
 Maintainer: Hadley Wickham <hadley@posit.co>
 Repository: CRAN
-Date/Publication: 2024-09-13 22:00:02 UTC
+Date/Publication: 2024-09-26 12:40:06 UTC
