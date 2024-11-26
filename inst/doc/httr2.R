@@ -69,6 +69,7 @@ resp |> resp_header("ConTEnT-LeNgTH")
 resp |> resp_body_json() |> str()
 
 ## ----error = TRUE-------------------------------------------------------------
+try({
 request(example_url()) |>
   req_url_path("/status/404") |>
   req_perform()
@@ -76,4 +77,5 @@ request(example_url()) |>
 request(example_url()) |>
   req_url_path("/status/500") |>
   req_perform()
+})
 
