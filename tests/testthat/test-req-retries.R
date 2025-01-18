@@ -1,3 +1,10 @@
+test_that("has useful default (with message)", {
+  req <- request_test()
+  expect_snapshot(req <- req_retry(req))
+  expect_equal(retry_max_tries(req), 2)
+  expect_equal(retry_max_seconds(req), Inf)
+})
+
 test_that("can set define maximum retries", {
   req <- request_test()
   expect_equal(retry_max_tries(req), 1)
@@ -70,9 +77,9 @@ test_that("validates its inputs", {
   req <- new_request("http://example.com")
 
   expect_snapshot(error = TRUE, {
-    req_retry(req, max_tries = 1)
-    req_retry(req, max_seconds = "x")
-    req_retry(req, retry_on_failure = "x")
+    req_retry(req, max_tries = 0)
+    req_retry(req, max_tries = 2, max_seconds = "x")
+    req_retry(req, max_tries = 2, retry_on_failure = "x")
   })
 })
 
@@ -84,4 +91,34 @@ test_that("is_number_or_na implemented correctly", {
   expect_equal(is_number_or_na(1:2), FALSE)
   expect_equal(is_number_or_na(numeric()), FALSE)
   expect_equal(is_number_or_na("x"), FALSE)
+})
+
+
+# circuit breaker --------------------------------------------------------
+
+test_that("triggered after specified requests", {
+  req <- request_test("/status/:status", status = 429) %>%
+    req_retry(
+      after = function(resp) 0,
+      max_tries = 10,
+      failure_threshold = 1
+    )
+
+  # First attempt performs, retries, then errors
+  req_perform(req) %>%
+    expect_condition(class = "httr2_perform") %>%
+    expect_condition(class = "httr2_retry") %>%
+    expect_error(class = "httr2_breaker")
+
+  # Second attempt errors without performing
+  req_perform(req) %>%
+    expect_no_condition(class = "httr2_perform") %>%
+    expect_error(class = "httr2_breaker")
+
+  # Attempt on same realm errors without trying at all
+  req2 <- request_test("/status/:status", status = 200) %>%
+    req_retry()
+  req_perform(req) %>%
+    expect_no_condition(class = "httr2_perform") %>%
+    expect_error(class = "httr2_breaker")
 })

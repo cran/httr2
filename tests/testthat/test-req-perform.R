@@ -55,11 +55,11 @@ test_that("persistent HTTP errors only get single attempt", {
 })
 
 test_that("don't retry curl errors by default", {
-  req <- request("") %>% req_retry(max_tries = 2)
+  req <- request("") %>% req_retry(max_tries = 2, failure_realm = "x")
   expect_error(req_perform(req), class = "httr2_failure")
 
   # But can opt-in to it
-  req <- request("") %>% req_retry(max_tries = 2, retry_on_failure = TRUE)
+  req <- request("") %>% req_retry(max_tries = 2, retry_on_failure = TRUE, failure_realm = "x")
   cnd <- catch_cnd(req_perform(req), "httr2_retry")
   expect_equal(cnd$tries, 1)
 })
@@ -224,4 +224,9 @@ test_that("authorization headers are redacted", {
       req_user_agent("test") %>%
       req_dry_run()
   })
+})
+
+test_that("doen't add space to urls (#567)", {
+  req <- request("https://example.com/test:1:2")
+  expect_output(req_dry_run(req), "test:1:2")
 })

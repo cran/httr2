@@ -2,6 +2,7 @@
 % Please edit documentation in R/req-url.R
 \name{req_url}
 \alias{req_url}
+\alias{req_url_relative}
 \alias{req_url_query}
 \alias{req_url_path}
 \alias{req_url_path_append}
@@ -9,7 +10,14 @@
 \usage{
 req_url(req, url)
 
-req_url_query(.req, ..., .multi = c("error", "comma", "pipe", "explode"))
+req_url_relative(req, url)
+
+req_url_query(
+  .req,
+  ...,
+  .multi = c("error", "comma", "pipe", "explode"),
+  .space = c("percent", "form")
+)
 
 req_url_path(req, ...)
 
@@ -18,7 +26,8 @@ req_url_path_append(req, ...)
 \arguments{
 \item{req, .req}{A httr2 \link{request} object.}
 
-\item{url}{New URL; completely replaces existing.}
+\item{url}{A new URL; either an absolute URL for \code{req_url()} or a
+relative URL for \code{req_url_relative()}.}
 
 \item{...}{For \code{req_url_query()}: <\code{\link[rlang:dyn-dots]{dynamic-dots}}>
 Name-value pairs that define query parameters. Each value must be either
@@ -28,31 +37,43 @@ If you want to opt out of escaping, wrap strings in \code{I()}.
 For \code{req_url_path()} and \code{req_url_path_append()}: A sequence of path
 components that will be combined with \code{/}.}
 
-\item{.multi}{Controls what happens when an element of \code{...} is a vector
-containing multiple values:
+\item{.multi}{Controls what happens when a value is a vector:
 \itemize{
 \item \code{"error"}, the default, throws an error.
 \item \code{"comma"}, separates values with a \verb{,}, e.g. \verb{?x=1,2}.
 \item \code{"pipe"}, separates values with a \code{|}, e.g. \code{?x=1|2}.
-\item \code{"explode"}, turns each element into its own parameter, e.g. \code{?x=1&x=2}.
+\item \code{"explode"}, turns each element into its own parameter, e.g. \code{?x=1&x=2}
 }
 
-If none of these functions work, you can alternatively supply a function
-that takes a character vector and returns a string.}
+If none of these options work for your needs, you can instead supply a
+function that takes a character vector of argument values and returns a
+a single string.}
+
+\item{.space}{How should spaces in query params be escaped? The default,
+"percent", uses standard percent encoding (i.e. \verb{\%20}), but you can opt-in
+to "form" encoding, which uses \code{+} instead.}
 }
 \value{
 A modified HTTP \link{request}.
 }
 \description{
 \itemize{
-\item \code{req_url()} replaces the entire url
-\item \code{req_url_query()} modifies the components of the query
-\item \code{req_url_path()} modifies the path
-\item \code{req_url_path_append()} adds to the path
+\item \code{req_url()} replaces the entire URL.
+\item \code{req_url_relative()} navigates to a relative URL.
+\item \code{req_url_query()} modifies individual query components.
+\item \code{req_url_path()} modifies just the path.
+\item \code{req_url_path_append()} adds to the path.
 }
 }
 \examples{
+# Change complete url
 req <- request("http://example.com")
+req |> req_url("http://google.com")
+
+# Use a relative url
+req <- request("http://example.com/a/b/c")
+req |> req_url_relative("..")
+req |> req_url_relative("/d/e/f")
 
 # Change url components
 req |>
@@ -61,9 +82,11 @@ req |>
   req_url_path_append("search.html") |>
   req_url_query(q = "the cool ice")
 
-# Change complete url
-req |>
-  req_url("http://google.com")
+# Modify individual query parameters
+req <- request("http://example.com?a=1&b=2")
+req |> req_url_query(a = 10)
+req |> req_url_query(a = NULL)
+req |> req_url_query(c = 3)
 
 # Use .multi to control what happens with vector parameters:
 req |> req_url_query(id = 100:105, .multi = "comma")
@@ -73,4 +96,11 @@ req |> req_url_query(id = 100:105, .multi = "explode")
 params <- list(a = "1", b = "2")
 req |>
   req_url_query(!!!params, c = "3")
+}
+\seealso{
+\itemize{
+\item To modify a URL without creating a request, see \code{\link[=url_modify]{url_modify()}} and
+friends.
+\item To use a template like \code{GET /user/{user}}, see \code{\link[=req_template]{req_template()}}.
+}
 }

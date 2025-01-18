@@ -53,7 +53,8 @@ or an empty list (\code{"list"}).}
 data in the body.
 \itemize{
 \item For \code{req_body_form()}, the values must be strings (or things easily
-coerced to strings);
+coerced to strings). Vectors are convertd to strings using the
+value of \code{.multi}.
 \item For \code{req_body_multipart()} the values must be strings or objects
 produced by \code{\link[curl:multipart]{curl::form_file()}}/\code{\link[curl:multipart]{curl::form_data()}}.
 \item For \code{req_body_json_modify()}, any simple data made from atomic vectors
@@ -63,17 +64,17 @@ and lists.
 \code{req_body_json()} uses this argument differently; it takes additional
 arguments passed on to  \code{\link[jsonlite:fromJSON]{jsonlite::toJSON()}}.}
 
-\item{.multi}{Controls what happens when an element of \code{...} is a vector
-containing multiple values:
+\item{.multi}{Controls what happens when a value is a vector:
 \itemize{
 \item \code{"error"}, the default, throws an error.
 \item \code{"comma"}, separates values with a \verb{,}, e.g. \verb{?x=1,2}.
 \item \code{"pipe"}, separates values with a \code{|}, e.g. \code{?x=1|2}.
-\item \code{"explode"}, turns each element into its own parameter, e.g. \code{?x=1&x=2}.
+\item \code{"explode"}, turns each element into its own parameter, e.g. \code{?x=1&x=2}
 }
 
-If none of these functions work, you can alternatively supply a function
-that takes a character vector and returns a string.}
+If none of these options work for your needs, you can instead supply a
+function that takes a character vector of argument values and returns a
+a single string.}
 }
 \value{
 A modified HTTP \link{request}.

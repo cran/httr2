@@ -1,13 +1,19 @@
 #' Modify request URL
 #'
 #' @description
-#' * `req_url()` replaces the entire url
-#' * `req_url_query()` modifies the components of the query
-#' * `req_url_path()` modifies the path
-#' * `req_url_path_append()` adds to the path
+#' * `req_url()` replaces the entire URL.
+#' * `req_url_relative()` navigates to a relative URL.
+#' * `req_url_query()` modifies individual query components.
+#' * `req_url_path()` modifies just the path.
+#' * `req_url_path_append()` adds to the path.
 #'
+#' @seealso
+#' * To modify a URL without creating a request, see [url_modify()] and
+#'   friends.
+#' * To use a template like `GET /user/{user}`, see [req_template()].
 #' @inheritParams req_perform
-#' @param url New URL; completely replaces existing.
+#' @param url A new URL; either an absolute URL for `req_url()` or a
+#'   relative URL for `req_url_relative()`.
 #' @param ... For `req_url_query()`: <[`dynamic-dots`][rlang::dyn-dots]>
 #'   Name-value pairs that define query parameters. Each value must be either
 #'   an atomic vector or `NULL` (which removes the corresponding parameters).
@@ -18,7 +24,14 @@
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
+#' # Change complete url
 #' req <- request("http://example.com")
+#' req |> req_url("http://google.com")
+#'
+#' # Use a relative url
+#' req <- request("http://example.com/a/b/c")
+#' req |> req_url_relative("..")
+#' req |> req_url_relative("/d/e/f")
 #'
 #' # Change url components
 #' req |>
@@ -27,9 +40,11 @@
 #'   req_url_path_append("search.html") |>
 #'   req_url_query(q = "the cool ice")
 #'
-#' # Change complete url
-#' req |>
-#'   req_url("http://google.com")
+#' # Modify individual query parameters
+#' req <- request("http://example.com?a=1&b=2")
+#' req |> req_url_query(a = 10)
+#' req |> req_url_query(a = NULL)
+#' req |> req_url_query(c = 3)
 #'
 #' # Use .multi to control what happens with vector parameters:
 #' req |> req_url_query(id = 100:105, .multi = "comma")
@@ -49,26 +64,21 @@ req_url <- function(req, url) {
 
 #' @export
 #' @rdname req_url
-#' @param .multi Controls what happens when an element of `...` is a vector
-#'   containing multiple values:
-#'
-#'   * `"error"`, the default, throws an error.
-#'   * `"comma"`, separates values with a `,`, e.g. `?x=1,2`.
-#'   * `"pipe"`, separates values with a `|`, e.g. `?x=1|2`.
-#'   * `"explode"`, turns each element into its own parameter, e.g. `?x=1&x=2`.
-#'
-#'   If none of these functions work, you can alternatively supply a function
-#'   that takes a character vector and returns a string.
+req_url_relative <- function(req, url) {
+  check_request(req)
+  req_url(req, url_modify_relative(req$url, url))
+}
+
+#' @export
+#' @rdname req_url
+#' @inheritParams url_modify_query
 req_url_query <- function(.req,
                           ...,
-                          .multi = c("error", "comma", "pipe", "explode")) {
+                          .multi = c("error", "comma", "pipe", "explode"),
+                          .space = c("percent", "form")) {
   check_request(.req)
-
-  dots <- multi_dots(..., .multi = .multi)
-
-  url <- url_parse(.req$url)
-  url$query <- modify_list(url$query, !!!dots)
-  req_url(.req, url_build(url))
+  url <- url_modify_query(.req$url, ..., .multi = .multi, .space = .space)
+  req_url(.req, url)
 }
 
 #' @export

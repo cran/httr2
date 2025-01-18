@@ -1,9 +1,6 @@
-
 #' Perform a request and return a streaming connection
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
-#'
 #' Use `req_perform_connection()` to perform a request if you want to stream the
 #' response body. A response returned by `req_perform_connection()` includes a
 #' connection as the body. You can then use [resp_stream_raw()],
@@ -16,10 +13,21 @@
 #' than providing callbacks that the data is pushed to. This is useful if you
 #' want to do other work in between handling inputs from the stream.
 #'
-#' @inheritParams req_perform_stream
+#' @inheritParams req_perform
 #' @param blocking When retrieving data, should the connection block and wait
 #'   for the desired information or immediately return what it has (possibly
 #'   nothing)?
+#' @param verbosity How much information to print? This is a wrapper
+#'   around [req_verbose()] that uses an integer to control verbosity:
+#'
+#'   * `0`: no output
+#'   * `1`: show headers
+#'   * `2`: show headers and bodies as they're streamed
+#'   * `3`: show headers, bodies, curl status messages, and stream buffer
+#'     management
+#'
+#'   Use [with_verbosity()] to control the verbosity of requests that
+#'   you can't affect directly.
 #' @export
 #' @examples
 #' req <- request(example_url()) |>
@@ -33,10 +41,19 @@
 #'
 #' # Always close the response when you're done
 #' close(resp)
-req_perform_connection <- function(req, blocking = TRUE) {
+#'
+#' # You can loop until complete with resp_stream_is_complete()
+#' resp <- req_perform_connection(req)
+#' while (!resp_stream_is_complete(resp)) {
+#'   print(length(resp_stream_raw(resp, kb = 12)))
+#' }
+#' close(resp)
+req_perform_connection <- function(req, blocking = TRUE, verbosity = NULL) {
   check_request(req)
   check_bool(blocking)
+  # verbosity checked in req_verbosity_connection
 
+  req <- req_verbosity_connection(req, verbosity %||% httr2_verbosity())
   req <- auth_sign(req)
   req_prep <- req_prepare(req)
   handle <- req_handle(req_prep)
@@ -49,6 +66,7 @@ req_perform_connection <- function(req, blocking = TRUE) {
   deadline <- Sys.time() + retry_max_seconds(req)
   resp <- NULL
   while (tries < max_tries && Sys.time() < deadline) {
+    retry_check_breaker(req, tries)
     sys_sleep(delay, "for retry backoff")
 
     if (!is.null(resp)) {
@@ -58,6 +76,7 @@ req_perform_connection <- function(req, blocking = TRUE) {
 
     if (retry_is_transient(req, resp)) {
       tries <- tries + 1
+
       delay <- retry_after(req, resp, tries)
       signal(class = "httr2_retry", tries = tries, delay = delay)
     } else {
@@ -77,6 +96,30 @@ req_perform_connection <- function(req, blocking = TRUE) {
 
   resp
 }
+
+# Like req_verbosity() but we want to print the streaming body when it's
+# requested not when curl actually receives it
+req_verbosity_connection <- function(req, verbosity, error_call = caller_env()) {
+  if (!is_integerish(verbosity, n = 1) || verbosity < 0 || verbosity > 3) {
+    cli::cli_abort("{.arg verbosity} must 0, 1, 2, or 3.", call = error_call)
+  }
+
+  req <- switch(verbosity + 1,
+    req,
+    req_verbose(req),
+    req_verbose(req, body_req = TRUE),
+    req_verbose(req, body_req = TRUE, info = TRUE)
+  )
+  if (verbosity > 1) {
+    req <- req_policies(
+      req,
+      show_streaming_body = verbosity >= 2,
+      show_streaming_buffer = verbosity >= 3
+    )
+  }
+  req
+}
+
 
 req_perform_connection1 <- function(req, handle, blocking = TRUE) {
   stream <- curl::curl(req$url, handle = handle)

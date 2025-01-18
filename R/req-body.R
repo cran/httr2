@@ -137,7 +137,8 @@ req_body_json_modify <- function(req, ...) {
 #'   data in the body.
 #'
 #'   * For `req_body_form()`, the values must be strings (or things easily
-#'     coerced to strings);
+#'     coerced to strings). Vectors are convertd to strings using the
+#'     value of `.multi`.
 #'   * For `req_body_multipart()` the values must be strings or objects
 #'     produced by [curl::form_file()]/[curl::form_data()].
 #'   * For `req_body_json_modify()`, any simple data made from atomic vectors
@@ -226,7 +227,7 @@ req_body_get <- function(req) {
     raw = req$body$data,
     form = {
       data <- unobfuscate(req$body$data)
-      query_build(data)
+      url_query_build(data)
     },
     json = exec(jsonlite::toJSON, req$body$data, !!!req$body$params),
     cli::cli_abort("Unsupported request body type {.str {req$body$type}}.")
