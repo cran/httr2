@@ -1,3 +1,28 @@
+# httr2 1.1.1
+
+## New features
+
+* `req_perform_parallel()` lifts many of the previous restrictions. It supports simplified versions of `req_throttle()` and `req_retry()`, can refresh OAuth tokens, and checks the cache before/after each request. (#681).
+* Default verbosity can be controlled by the `HTTR2_VERBOSITY` environment variable (#687).
+* `local_verbosity()` matches the existing `with_verbosity()` and allows for local control of verbosity (#687).
+* `req_dry_run()` and `req_verbose()` display compressed correctly (#91, #656) and automatically prettify JSON bodies (#668). You can suppress prettification with `options(httr2_pretty_json = FALSE)` (#668).
+* `req_throttle()` implements a new "token bucket" algorithm that maintains average rate limits while allowing bursts of higher request rates.
+
+## Minor improvements and bug fixes
+
+* `aws_v4_signature()` correctly processes URLs containing query parameters (@jeffreyzuber, #645).
+* `oauth_client()` and `oauth_token()` implement improved print methods with bulleted lists, similar to other httr2 objects, and `oauth_client()` with custom `auth` functions no longer produces errors (#648).
+* `req_dry_run()` omits headers that would vary in tests and can prettify JSON output.
+* `req_headers()` automatically redacts `Authorization` headers (#649) and correctly implements case-insensitive modification of existing headers (#682).
+* `req_headers_redacted()` now supports dynamic dots (#647).
+* `req_oauth_auth_code()` no longer adds trailing "/" characters to properly formed `redirect_uri` values (@jonthegeek, #646).
+* `req_perform_connection()` produces more helpful error messages when requests fail at the networking level.
+* `req_perform_parallel(pool)` now is deprecated in favour of a new `max_active` argument (#681).
+* `req_user_agent()` memoizes the default user agent to improve performance, as computing version numbers is relatively slow (300 µs).
+* `resp_link_url()` once again respects the case insensitivity for header names (@DavidRLovell, #655).
+* `resp_stream_sse()` automatically retrieves the next event when the current event contains no data, and returns data as a single string (#650).
+* `str()` correctly redacts redacted headers (#682).
+
 # httr2 1.1.0
 
 ## Lifecycle changes

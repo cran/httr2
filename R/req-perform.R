@@ -87,7 +87,6 @@ req_perform <- function(
   }
 
   req <- req_verbosity(req, verbosity)
-  req <- auth_sign(req)
 
   req <- cache_pre_fetch(req, path)
   if (is_response(req)) {
@@ -101,9 +100,9 @@ req_perform <- function(
 
   n <- 0
   tries <- 0
-  reauth <- FALSE # only ever re-authenticate once
+  reauthed <- FALSE # only ever re-authenticate once
 
-  throttle_delay(req)
+  sys_sleep(throttle_delay(req), "for throttling delay")
 
   delay <- 0
   while (tries < max_tries && Sys.time() < deadline) {
@@ -111,28 +110,16 @@ req_perform <- function(
     sys_sleep(delay, "for retry backoff")
     n <- n + 1
 
-    resp <- tryCatch(
-      req_perform1(req, path = path, handle = handle),
-      error = function(err) {
-        error_cnd(
-          message = "Failed to perform HTTP request.",
-          class = c("httr2_failure", "httr2_error"),
-          parent = err,
-          request = req,
-          call = error_call,
-          trace = trace_back()
-        )
-      }
-    )
+    resp <- req_perform1(req, path = path, handle = handle)
     req_completed(req_prep)
 
     if (retry_is_transient(req, resp)) {
       tries <- tries + 1
       delay <- retry_after(req, resp, tries)
       signal(class = "httr2_retry", tries = tries, delay = delay)
-    } else if (!reauth && resp_is_invalid_oauth_token(req, resp)) {
-      reauth <- TRUE
-      req <- auth_sign(req, TRUE)
+    } else if (!reauthed && resp_is_invalid_oauth_token(req, resp)) {
+      reauthed <- TRUE
+      req_auth_clear_cache(req)
       req_prep <- req_prepare(req)
       handle <- req_handle(req_prep)
       delay <- 0
@@ -142,21 +129,44 @@ req_perform <- function(
     }
   }
   # Used for testing
-  signal(class = "httr2_fetch", n = n, tries = tries, reauth = reauth)
+  signal(class = "httr2_fetch", n = n, tries = tries, reauth = reauthed)
 
   resp <- cache_post_fetch(req, resp, path = path)
   handle_resp(req, resp, error_call = error_call)
 }
 
 handle_resp <- function(req, resp, error_call = caller_env()) {
+  if (resp_show_body(resp)) {
+    verbose_body("<< ", resp$body, resp$headers$`content-type`)
+  }
+
   if (is_error(resp)) {
+    resp$request <- req
+    resp$call <- error_call
     cnd_signal(resp)
   } else if (error_is_error(req, resp)) {
-    body <- error_body(req, resp, error_call)
-    resp_abort(resp, req, body, call = error_call)
+    cnd <- resp_failure_cnd(req, resp, error_call = error_call)
+    cnd_signal(cnd)
   } else {
     resp
   }
+}
+
+resp_failure_cnd <- function(req, resp, error_call = caller_env()) {
+  status <- resp_status(resp)
+  desc <- resp_status_desc(resp)
+  message <- paste0("HTTP ", status, if (!is.na(desc)) paste0(" ", desc), ".")
+
+  info <- error_body(req, resp, error_call)
+
+  catch_cnd(abort(
+    c(message, resp_auth_message(resp), info),
+    status = status,
+    resp = resp,
+    class = c(glue("httr2_http_{status}"), "httr2_http", "httr2_error", "rlang_error"),
+    request = req,
+    call = error_call
+  ))
 }
 
 req_perform1 <- function(req, path = NULL, handle = NULL) {
@@ -164,28 +174,31 @@ req_perform1 <- function(req, path = NULL, handle = NULL) {
   the$last_response <- NULL
   signal(class = "httr2_perform")
 
-  if (!is.null(path)) {
-    res <- curl::curl_fetch_disk(req$url, path, handle)
-    body <- new_path(path)
-  } else {
-    res <- curl::curl_fetch_memory(req$url, handle)
-    body <- res$content
+  err <- capture_curl_error({
+    fetch <- curl_fetch(handle, req$url, path)
+  })
+  if (is_error(err)) {
+    return(err)
   }
 
   # Ensure cookies are saved to disk now, not when request is finalised
   curl::handle_setopt(handle, cookielist = "FLUSH")
   curl::handle_setopt(handle, cookiefile = NULL, cookiejar = NULL)
 
-  resp <- new_response(
-    method = req_method_get(req),
-    url = res$url,
-    status_code = res$status_code,
-    headers = as_headers(res$headers),
-    body = body,
-    request = req
-  )
-  the$last_response <- resp
-  resp
+  the$last_response <- create_response(req, fetch$curl_data, fetch$body)
+  the$last_response
+}
+
+curl_fetch <- function(handle, url, path) {
+  if (!is.null(path)) {
+    curl_data <- curl::curl_fetch_disk(url, path, handle)
+    body <- new_path(path)
+  } else {
+    curl_data <- curl::curl_fetch_memory(url, handle)
+    body <- curl_data$content
+  }
+
+  list(curl_data = curl_data, body = body)
 }
 
 req_verbosity <- function(req, verbosity, error_call = caller_env()) {
@@ -224,72 +237,25 @@ last_request <- function() {
   the$last_request
 }
 
-#' Perform a dry run
-#'
-#' This shows you exactly what httr2 will send to the server, without
-#' actually sending anything. It requires the httpuv package because it
-#' works by sending the real HTTP request to a local webserver, thanks to
-#' the magic of [curl::curl_echo()].
-#'
-#' ## Limitations
-#'
-#' * The `Host` header is not respected.
-#'
-#' @inheritParams req_verbose
-#' @param quiet If `TRUE` doesn't print anything.
-#' @returns Invisibly, a list containing information about the request,
-#'   including `method`, `path`, and `headers`.
-#' @export
-#' @examples
-#' # httr2 adds default User-Agent, Accept, and Accept-Encoding headers
-#' request("http://example.com") |> req_dry_run()
-#'
-#' # the Authorization header is automatically redacted to avoid leaking
-#' # credentials on the console
-#' req <- request("http://example.com") |> req_auth_basic("user", "password")
-#' req |> req_dry_run()
-#'
-#' # if you need to see it, use redact_headers = FALSE
-#' req |> req_dry_run(redact_headers = FALSE)
-req_dry_run <- function(req, quiet = FALSE, redact_headers = TRUE) {
-  check_request(req)
-  check_installed("httpuv")
-
-  if (!quiet) {
-    to_redact <- attr(req$headers, "redact")
-    debug <- function(type, msg) {
-      if (type == 2L) verbose_header("", msg, redact = redact_headers, to_redact = to_redact)
-      if (type == 4L) verbose_message("", msg)
-    }
-    req <- req_options(req, debugfunction = debug, verbose = TRUE)
-  }
-
-  req <- req_prepare(req)
-  handle <- req_handle(req)
-  curl::handle_setopt(handle, url = req$url)
-  resp <- curl::curl_echo(handle, progress = FALSE)
-
-  invisible(list(
-    method = resp$method,
-    path = resp$path,
-    headers = as.list(resp$headers)
-  ))
-}
-
 # Must call req_prepare(), then req_handle(), then after the request has been
-# performed, req_completed()
+# performed, req_completed() (on the prepared requests)
 req_prepare <- function(req) {
+  req <- auth_sign(req)
   req <- req_method_apply(req)
   req <- req_body_apply(req)
 
-  if (!has_name(req$options, "useragent")) {
-    req <- req_user_agent(req)
-  }
+  # Save actually request headers so that req_verbose() can use them
+  req$state$headers <- req$headers
 
   req
 }
 req_handle <- function(req) {
+  if (!req_has_user_agent(req)) {
+    req <- req_user_agent(req)
+  }
+
   handle <- curl::new_handle()
+  curl::handle_setopt(handle, url = req$url)
   curl::handle_setheaders(handle, .list = headers_flatten(req$headers))
   curl::handle_setopt(handle, .list = req$options)
   if (length(req$fields) > 0) {
@@ -304,3 +270,7 @@ req_completed <- function(req) {
 
 new_path <- function(x) structure(x, class = "httr2_path")
 is_path <- function(x) inherits(x, "httr2_path")
+
+resp_show_body <- function(resp) {
+  resp$request$policies$show_body %||% FALSE
+}

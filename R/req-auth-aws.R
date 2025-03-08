@@ -60,8 +60,7 @@ auth_aws_sign <- function(req,
                           aws_secret_access_key,
                           aws_session_token = NULL,
                           aws_service = NULL,
-                          aws_region = NULL,
-                          reauth = FALSE) {
+                          aws_region = NULL) {
 
   current_time <- Sys.time()
 
@@ -129,7 +128,7 @@ aws_v4_signature <- function(method,
     CanonicalQueryString <- ""
   } else {
     sorted_query <- url$query[order(names(url$query))]
-    CanonicalQueryString <- url_query_build(CanonicalQueryString)
+    CanonicalQueryString <- url_query_build(sorted_query)
   }
 
   headers$host <- url$hostname

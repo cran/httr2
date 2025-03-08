@@ -6,9 +6,7 @@ test_that("success request returns response", {
 })
 
 test_that("curl errors become errors", {
-  local_mocked_bindings(
-    req_perform1 = function(...) abort("Failed to connect")
-  )
+  local_mocked_bindings(curl_fetch = function(...) abort("Failed to connect"))
 
   req <- request("http://127.0.0.1")
   expect_snapshot(req_perform(req), error = TRUE)
@@ -17,6 +15,9 @@ test_that("curl errors become errors", {
   # and captures request
   cnd <- catch_cnd(req_perform(req), classes = "error")
   expect_equal(cnd$request, req)
+
+  # But last_response() is NULL
+  expect_null(last_response())
 })
 
 test_that("http errors become errors", {
@@ -35,6 +36,10 @@ test_that("http errors become errors", {
   req_perform(req) %>%
     expect_error(class = "httr2_http_429") %>%
     expect_no_condition(class = "httr2_sleep")
+
+  # non-standard status codes don't get descriptions
+  req <- request_test("/status/:status", status = 599)
+  expect_snapshot(req_perform(req), error = TRUE)
 })
 
 test_that("can force successful HTTP statuses to error", {
@@ -114,8 +119,7 @@ test_that("can cache requests with etags", {
 })
 
 test_that("can cache requests with paths (cache-control)", {
-  req <- request(example_url()) %>%
-    req_url_path("/cache/2") %>%
+  req <- request(example_url("/cache/2")) %>%
     req_cache(withr::local_tempfile())
 
   path1 <- withr::local_tempfile()
@@ -146,8 +150,7 @@ test_that("can cache requests with paths (cache-control)", {
 })
 
 test_that("can cache requests with paths (if-modified-since)", {
-  req <- request(example_url()) %>%
-    req_url_path("/cache") %>%
+  req <- request(example_url("/cache")) %>%
     req_cache(tempfile())
 
   path1 <- tempfile()
@@ -176,7 +179,7 @@ test_that("can retrieve last request and response", {
   expect_equal(last_response(), resp)
 })
 
-test_that("can last response is NULL if it fails", {
+test_that("last response is NULL if it fails", {
   req <- request("")
   try(req_perform(req), silent = TRUE)
 
@@ -191,42 +194,4 @@ test_that("checks input types", {
     req_perform(req, verbosity = 1.5)
     req_perform(req, mock = 7)
   })
-})
-
-
-# dry run -----------------------------------------------------------------
-
-test_that("req_dry_run() returns useful data", {
-  resp <- request("http://example.com") %>% req_dry_run(quiet = TRUE)
-  expect_equal(resp$method, "GET")
-  expect_equal(resp$path, "/")
-  expect_match(resp$headers$`user-agent`, "libcurl")
-})
-
-test_that("req_dry_run() shows body", {
-  # For reasons I don't understand, returns binary data in R 3.4
-  skip_if_not(getRversion() >= "3.5")
-
-  expect_snapshot({
-    request("http://example.com") %>%
-      req_headers(`Accept-Encoding` = "gzip") %>%
-      req_body_json(list(x = 1, y = TRUE, z = "c")) %>%
-      req_user_agent("test") %>%
-      req_dry_run()
-  })
-})
-
-test_that("authorization headers are redacted", {
-  expect_snapshot({
-    request("http://example.com") %>%
-      req_headers(`Accept-Encoding` = "gzip") %>%
-      req_auth_basic("user", "password") %>%
-      req_user_agent("test") %>%
-      req_dry_run()
-  })
-})
-
-test_that("doen't add space to urls (#567)", {
-  req <- request("https://example.com/test:1:2")
-  expect_output(req_dry_run(req), "test:1:2")
 })

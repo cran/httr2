@@ -14,8 +14,8 @@
 #'   * Use `NULL` to reset a value to httr2's default
 #'   * Use `""` to remove a header
 #'   * Use a character vector to repeat a header.
-#' @param .redact Headers to redact. If `NULL`, the default, the added headers
-#'   are not redacted.
+#' @param .redact A character vector of headers to redact. The Authorization
+#'   header is always redacted.
 #' @returns A modified HTTP [request].
 #' @export
 #' @examples
@@ -63,16 +63,15 @@
 #' req_secret |> req_dry_run()
 req_headers <- function(.req, ..., .redact = NULL) {
   check_request(.req)
-
-  headers <- list2(...)
-  header_names <- names2(headers)
   check_character(.redact, allow_null = TRUE)
 
-  redact_out <- attr(.req$headers, "redact") %||% .redact %||% character()
-  redact_out <- union(redact_out, .redact)
-  .req$headers <- modify_list(.req$headers, !!!headers)
+  headers  <- modify_list(.req$headers, ..., .ignore_case = TRUE)
 
-  attr(.req$headers, "redact") <- redact_out
+  redact <- union(.redact, "Authorization")
+  redact <- redact[tolower(redact) %in% tolower(names(headers))]
+  redact <- sort(union(redact, attr(.req$headers, "redact")))
+
+  .req$headers <- new_headers(headers, redact)
 
   .req
 }
@@ -82,6 +81,6 @@ req_headers <- function(.req, ..., .redact = NULL) {
 req_headers_redacted <- function(.req, ...) {
   check_request(.req)
 
-  dots <- list(...)
-  req_headers(.req, !!!dots, .redact = names(dots))
+  headers <- list2(...)
+  req_headers(.req, !!!headers, .redact = names(headers))
 }

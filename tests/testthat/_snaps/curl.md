@@ -18,16 +18,14 @@
 
     Code
       print(curl_simplify_headers(headers, simplify_headers = TRUE))
-    Message
-      <httr2_headers>
     Output
+      <httr2_headers>
       Accept: application/vnd.api+json
       user-agent: agent
     Code
       print(curl_simplify_headers(headers, simplify_headers = FALSE))
-    Message
-      <httr2_headers>
     Output
+      <httr2_headers>
       Sec-Fetch-Dest: empty
       Sec-Fetch-Mode: cors
       sec-ch-ua-mobile: ?0
@@ -162,14 +160,14 @@
         ) |> 
         req_perform()
     Code
-      clipr::read_clip()
+      writeLines(clipr::read_clip())
     Output
-      [1] "request(\"http://example.com/\") |> "
-      [2] "  req_headers("                      
-      [3] "    A = \"1\","                      
-      [4] "    B = \"2\","                      
-      [5] "  ) |> "                             
-      [6] "  req_perform()"                     
+      request("http://example.com/") |> 
+        req_headers(
+          A = "1",
+          B = "2",
+        ) |> 
+        req_perform()
 
 # encode_string2() produces simple strings
 

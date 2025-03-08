@@ -4,7 +4,10 @@ bullets_with_header <- function(header, x) {
   }
 
   cli::cli_text("{.strong {header}}")
+  bullets(x)
+}
 
+bullets <- function(x) {
   as_simple <- function(x) {
     if (is.atomic(x) && length(x) == 1) {
       if (is.character(x)) {
@@ -13,17 +16,23 @@ bullets_with_header <- function(header, x) {
         format(x)
       }
     } else {
-      obj_type_friendly(x)
+      if (is_redacted(x)) {
+        format(x)
+      } else {
+        paste0("<", class(x)[[1L]], ">")
+      }
     }
   }
   vals <- map_chr(x, as_simple)
+  names <- format(names(x))
+  names <- gsub(" ", "\u00a0", names, fixed = TRUE)
 
   for (i in seq_along(x)) {
-    cli::cli_li("{.field {names(x)[[i]]}}: {vals[[i]]}")
+    cli::cli_li("{.field {names[[i]]}}: {vals[[i]]}")
   }
 }
 
-modify_list <- function(.x, ..., error_call = caller_env()) {
+modify_list <- function(.x, ..., .ignore_case = FALSE, error_call = caller_env()) {
   dots <- list2(...)
   if (length(dots) == 0) return(.x)
 
@@ -34,9 +43,12 @@ modify_list <- function(.x, ..., error_call = caller_env()) {
     )
   }
 
+  if (.ignore_case) {
+    out <- .x[!tolower(names(.x)) %in% tolower(names(dots))]
+  } else {
+    out <- .x[!names(.x) %in% names(dots)]
+  }
 
-
-  out <- .x[!names(.x) %in% names(dots)]
   out <- c(out, compact(dots))
 
   if (length(out) == 0) {
@@ -59,7 +71,7 @@ sys_sleep <- function(seconds, task, fps = 10, progress = NULL) {
   }
 
   if (!progress) {
-    cli::cli_alert("Waiting {ceiling(seconds)}s {task}")
+    cli::cli_alert("Waiting {round(seconds, 2)}s {task}")
     Sys.sleep(seconds)
     return(invisible())
   }
@@ -80,6 +92,9 @@ sys_sleep <- function(seconds, task, fps = 10, progress = NULL) {
 
   invisible()
 }
+
+# allow mocking
+Sys.sleep <- NULL
 
 cur_time <- function() proc.time()[[3]]
 
@@ -114,41 +129,6 @@ base64_url_decode <- function(x) {
 
 base64_url_rand <- function(bytes = 32) {
   base64_url_encode(openssl::rand_bytes(bytes))
-}
-
-#' Temporarily set verbosity for all requests
-#'
-#' `with_verbosity()` is useful for debugging httr2 code buried deep inside
-#' another package because it allows you to see exactly what's been sent
-#' and requested.
-#'
-#' @inheritParams req_perform
-#' @param code Code to execture
-#' @returns The result of evaluating `code`.
-#' @export
-#' @examples
-#' fun <- function() {
-#'   request("https://httr2.r-lib.org") |> req_perform()
-#' }
-#' with_verbosity(fun())
-with_verbosity <- function(code, verbosity = 1) {
-  withr::local_options(httr2_verbosity = verbosity)
-  code
-}
-
-httr2_verbosity <- function() {
-  x <- getOption("httr2_verbosity")
-  if (!is.null(x)) {
-    return(x)
-  }
-
-  # Hackish fallback for httr::with_verbose
-  old <- getOption("httr_config")
-  if (!is.null(old$options$debugfunction)) {
-    1
-  } else {
-    0
-  }
 }
 
 local_time <- function(x, tz = "UTC") {
@@ -271,7 +251,7 @@ create_progress_bar <- function(total,
     )
   }
 
-  args$name <- args$name %||% name
+  args$name <- args[["name"]] %||% name
   # Can be removed if https://github.com/r-lib/cli/issues/630 is fixed
   if (is.infinite(total)) {
     total <- NA
@@ -334,15 +314,10 @@ is_named_list <- function(x) {
 }
 
 pretty_json <- function(x) {
-  parsed <- tryCatch(
-    jsonlite::parse_json(x),
-    error = function(e) NULL
+  tryCatch(
+    gsub("\n$", "", jsonlite::prettify(x, indent = 2)),
+    error = function(e) x
   )
-  if (is.null(parsed)) {
-    x
-  } else {
-    jsonlite::toJSON(parsed, auto_unbox = TRUE, pretty = TRUE)
-  }
 }
 
 log_stream <- function(..., prefix = "<< ") {

@@ -12,22 +12,23 @@ test_that("can add header called req", {
   expect_equal(req$options, list(req = 1))
 })
 
-test_that("can set user agent", {
-  ua <- function(...) {
-    request("http://example.com") %>%
-      req_user_agent(...) %>%
-      .$options %>%
-      .$useragent
-  }
+test_that("default user agent includes httr2 + libcurl versions", {
+  req <- request("http://example.com") %>% req_user_agent()
 
-  expect_match(ua(), "libcurl")
-  expect_equal(ua("abc"), "abc")
+  expect_match(req$options$useragent, "httr2")
+  expect_match(req$options$useragent, "libcurl")
+})
 
+test_that("can override default user agent", {
+  req <- request("http://example.com") %>% req_user_agent("abc")
+  expect_equal(req$options$useragent, "abc")
+})
+
+test_that("default user agent works with dev curl", {
   # non-R-ish library version for curl, #416
-  with_mocked_bindings(
-    curl_system_version = function(...) "8.4.0-DEV",
-    code = expect_match(ua(), "libcurl/8.4.0-DEV")
-  )
+  local_mocked_bindings(curl_system_version = function(...) "8.4.0-DEV")
+
+  expect_match(default_user_agent(), "libcurl/8.4.0-DEV")
 })
 
 test_that("can set timeout", {
@@ -42,29 +43,12 @@ test_that("validates inputs", {
   })
 })
 
-test_that("can request verbose record of request", {
-  req <- request_test("/post") %>% req_body_raw("This is some text")
-
-  # Snapshot test of what can be made reproducible
-  req1 <- req %>%
-    req_headers("Host" = "http://example.com") %>%
-    req_headers(`Accept-Encoding` = "gzip") %>%
-    req_user_agent("verbose") %>%
-    req_verbose(header_resp = FALSE, body_req = TRUE)
-  expect_snapshot_output(invisible(req_perform(req1)))
-
-  # Lightweight test for everything else
-  req2 <- req %>% req_verbose(info = TRUE, body_resp = TRUE)
-  expect_output(req_perform(req2))
-})
-
 test_that("req_proxy gives helpful errors", {
   req <- request_test("/get")
   expect_snapshot(error = TRUE, {
     req %>% req_proxy(port = "abc")
     req %>% req_proxy("abc", auth = "bsc")
   })
-
 })
 
 test_that("auth_flags gives correct constant", {
