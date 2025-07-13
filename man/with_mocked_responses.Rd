@@ -2,9 +2,7 @@
 % Please edit documentation in R/req-mock.R
 \name{with_mocked_responses}
 \alias{with_mocked_responses}
-\alias{with_mock}
 \alias{local_mocked_responses}
-\alias{local_mock}
 \title{Temporarily mock requests}
 \usage{
 with_mocked_responses(mock, code)
@@ -27,12 +25,14 @@ handle the request) or a \link{response} (if it does).
 \item{env}{Environment to use for scoping changes.}
 }
 \value{
-\code{with_mock()} returns the result of evaluating \code{code}.
+\code{with_mocked_responses()} returns the result of evaluating \code{code}.
 }
 \description{
 Mocking allows you to selectively and temporarily replace the response
-you would typically receive from a request with your own code. It's
-primarily used for testing.
+you would typically receive from a request with your own code. These
+functions are low-level and we don't recommend using them directly.
+Instead use package that uses these functions under the hood, like
+\pkg{httptest2} or \pkg{vcr}.
 }
 \examples{
 # This function should perform a response against google.com:
@@ -45,5 +45,5 @@ google <- function() {
 my_mock <- function(req) {
   response(status_code = 403)
 }
-try(with_mock(my_mock, google()))
+try(with_mocked_responses(my_mock, google()))
 }

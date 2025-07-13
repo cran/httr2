@@ -26,15 +26,28 @@ req_method_apply <- function(req) {
     return(req)
   }
 
-  switch(req$method,
+  switch(
+    req$method,
     HEAD = req_options(req, nobody = TRUE),
     req_options(req, customrequest = req$method)
   )
 }
 
-# Guess the method that curl will used based on options
-# https://everything.curl.dev/libcurl-http/requests#request-method
-req_method_get <- function(req) {
+#' Get request method
+#'
+#' Defaults to `GET`, unless the request has a body, in which case it uses
+#' `POST`. Either way the method can be overridden with [req_method()].
+#'
+#' @inheritParams req_perform
+#' @export
+#' @examples
+#' req <- request(example_url())
+#' req_get_method(req)
+#' req_get_method(req |> req_body_raw("abc"))
+#' req_get_method(req |> req_method("DELETE"))
+#' req_get_method(req |> req_method("HEAD"))
+req_get_method <- function(req) {
+  # https://everything.curl.dev/libcurl-http/requests#request-method
   if (!is.null(req$method)) {
     req$method
   } else if (has_name(req$options, "nobody")) {
@@ -45,3 +58,6 @@ req_method_get <- function(req) {
     "GET"
   }
 }
+
+# shim so httptest2 doesn't fail
+req_method_get <- req_get_method

@@ -1,5 +1,5 @@
 oauth_flow_fetch <- function(req, source, error_call = caller_env()) {
-  req <- req_error(req, is_error = ~FALSE)
+  req <- req_error(req, is_error = \(resp) FALSE)
   resp <- req_perform(req, error_call = current_call())
 
   oauth_flow_parse(resp, source, error_call = error_call)
@@ -58,10 +58,12 @@ oauth_flow_body <- function(resp) {
 # https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 #
 # TODO: automatically fill in description from text in RFC?
-oauth_flow_abort <- function(error,
-                             description = NULL,
-                             uri = NULL,
-                             error_call = caller_env()) {
+oauth_flow_abort <- function(
+  error,
+  description = NULL,
+  uri = NULL,
+  error_call = caller_env()
+) {
   cli::cli_abort(
     c(
       "OAuth failure [{error}]",

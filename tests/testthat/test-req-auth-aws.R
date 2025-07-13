@@ -1,14 +1,30 @@
 test_that("can correctly sign a request with dummy credentials", {
   req <- request("https://sts.amazonaws.com/")
-  req <- req_auth_aws_v4(req,
+  req <- req_auth_aws_v4(
+    req,
     aws_access_key_id = "AKIAIOSFODNN7EXAMPLE",
     aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
   )
-  req <- req_body_form(req, Action = "GetCallerIdentity", Version = "2011-06-15")
+  req <- req_body_form(
+    req,
+    Action = "GetCallerIdentity",
+    Version = "2011-06-15"
+  )
   expect_error(req_perform(req), class = "httr2_http_403")
 
   # And can clear non-existant cache
   expect_no_error(req_auth_clear_cache(req))
+})
+
+test_that("clear error if body type is unsupported", {
+  req <- request("https://sts.amazonaws.com/")
+  req <- req_auth_aws_v4(
+    req,
+    aws_access_key_id = "AKIAIOSFODNN7EXAMPLE",
+    aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  )
+  req <- req_body_multipart(req, x = "y")
+  expect_snapshot(req_perform(req), error = TRUE)
 })
 
 test_that("can correctly sign a request with live credentials", {
@@ -17,7 +33,8 @@ test_that("can correctly sign a request with live credentials", {
 
   # https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html
   req <- request("https://sts.amazonaws.com/")
-  req <- req_auth_aws_v4(req,
+  req <- req_auth_aws_v4(
+    req,
     aws_access_key_id = creds$access_key_id,
     aws_secret_access_key = creds$secret_access_key,
     aws_session_token = creds$session_token,
@@ -32,14 +49,14 @@ test_that("can correctly sign a request with live credentials", {
 })
 
 test_that('aws_v4_signature calculates correct signature', {
-  req <- request("https://example.execute-api.us-east-1.amazonaws.com/v0/") %>%
+  req <- request("https://example.execute-api.us-east-1.amazonaws.com/v0/") |>
     req_method('POST')
 
-  body_sha256 <- openssl::sha256(req_body_get(req))
+  body_sha256 <- openssl::sha256(req_get_body(req) %||% "")
   current_time <- as.POSIXct(1737483742, origin = "1970-01-01", tz = "EST")
 
   signature <- aws_v4_signature(
-    method = req_method_get(req),
+    method = req_get_method(req),
     url = url_parse(req$url),
     headers = req$headers,
     body_sha256 = body_sha256,
@@ -58,7 +75,9 @@ test_that("signing agrees with glacier example", {
 
   signature <- aws_v4_signature(
     method = "PUT",
-    url = url_parse("https://glacier.us-east-1.amazonaws.com/-/vaults/examplevault"),
+    url = url_parse(
+      "https://glacier.us-east-1.amazonaws.com/-/vaults/examplevault"
+    ),
     headers = list(
       "x-amz-date" = "20120525T002453Z",
       "x-amz-glacier-version" = "2012-06-01"

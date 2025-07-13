@@ -20,14 +20,13 @@
 #' oauth_token("abcdef", expires_in = 3600)
 #' oauth_token("abcdef", refresh_token = "ghijkl")
 oauth_token <- function(
-                        access_token,
-                        token_type = "bearer",
-                        expires_in = NULL,
-                        refresh_token = NULL,
-                        ...,
-                        .date = Sys.time()
-                        ) {
-
+  access_token,
+  token_type = "bearer",
+  expires_in = NULL,
+  refresh_token = NULL,
+  ...,
+  .date = Sys.time()
+) {
   check_string(access_token)
   check_string(token_type)
   check_number_whole(expires_in, allow_null = TRUE)
@@ -54,12 +53,15 @@ oauth_token <- function(
 
 #' @export
 print.httr2_token <- function(x, ...) {
-  cli::cli_text(cli::style_bold("<", paste(class(x), collapse = "/"), ">"))
+  cli::cat_line(cli::style_bold("<", paste(class(x), collapse = "/"), ">"))
   if (has_name(x, "expires_at")) {
     x$expires_at <- format(.POSIXct(x$expires_at))
   }
 
-  redacted <- list_redact(compact(x), c("access_token", "refresh_token", "id_token"))
+  redacted <- list_redact(
+    compact(x),
+    c("access_token", "refresh_token", "id_token")
+  )
   bullets(redacted)
   invisible(x)
 }
@@ -72,7 +74,12 @@ token_has_expired <- function(token, delay = 5) {
   }
 }
 
-token_refresh <- function(client, refresh_token, scope = NULL, token_params = list()) {
+token_refresh <- function(
+  client,
+  refresh_token,
+  scope = NULL,
+  token_params = list()
+) {
   out <- oauth_client_get_token(
     client,
     grant_type = "refresh_token",

@@ -31,11 +31,10 @@ example_app <- function() {
   app <- webfakes::httpbin_app()
   # paginated iris endpoint
   app$get("/iris", function(req, res) {
-    page <- req$query$page
-    if (is.null(page)) page <- 1L
+    page <- req$query$page %||% 1L
     page <- as.integer(page)
-    page_size <- req$query$limit
-    if (is.null(page_size)) page_size <- 20L
+
+    page_size <- req$query$limit %||% 20L
     page_size <- as.integer(page_size)
 
     n <- nrow(datasets::iris)
@@ -64,8 +63,8 @@ example_github_client <- function() {
   oauth_client(
     id = "28acfec0674bb3da9f38",
     secret = obfuscated(paste0(
-       "J9iiGmyelHltyxqrHXW41ZZPZamyUNxSX1_uKnv",
-       "PeinhhxET_7FfUs2X0LLKotXY2bpgOMoHRCo"
+      "J9iiGmyelHltyxqrHXW41ZZPZamyUNxSX1_uKnv",
+      "PeinhhxET_7FfUs2X0LLKotXY2bpgOMoHRCo"
     )),
     token_url = "https://github.com/login/oauth/access_token",
     name = "hadley-oauth-test"

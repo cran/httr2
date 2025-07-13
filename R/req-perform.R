@@ -34,8 +34,8 @@
 #'   for large responses since it avoids storing the response in memory.
 #' @param mock A mocking function. If supplied, this function is called
 #'   with the request. It should return either `NULL` (if it doesn't want to
-#'   handle the request) or a [response] (if it does). See [with_mock()]/
-#'   `local_mock()` for more details.
+#'   handle the request) or a [response] (if it does). See
+#'   [with_mocked_responses()]/`local_mocked_responses()` for more details.
 #' @param verbosity How much information to print? This is a wrapper
 #'   around [req_verbose()] that uses an integer to control verbosity:
 #'
@@ -65,21 +65,20 @@
 #' request("https://google.com") |>
 #'   req_perform()
 req_perform <- function(
-      req,
-      path = NULL,
-      verbosity = NULL,
-      mock = getOption("httr2_mock", NULL),
-      error_call = current_env()
-  ) {
+  req,
+  path = NULL,
+  verbosity = NULL,
+  mock = getOption("httr2_mock", NULL),
+  error_call = current_env()
+) {
   check_request(req)
   check_string(path, allow_null = TRUE)
   # verbosity checked by req_verbosity
-  check_function(mock, allow_null = TRUE)
+  mock <- as_mock_function(mock, error_call)
 
   verbosity <- verbosity %||% httr2_verbosity()
 
   if (!is.null(mock)) {
-    mock <- as_function(mock)
     mock_resp <- mock(req)
     if (!is.null(mock_resp)) {
       return(handle_resp(req, mock_resp, error_call = error_call))
@@ -160,11 +159,17 @@ resp_failure_cnd <- function(req, resp, error_call = caller_env()) {
   info <- error_body(req, resp, error_call)
 
   catch_cnd(abort(
-    c(message, resp_auth_message(resp), info),
+    c(message, resp_auth_message(resp), i = info),
     status = status,
     resp = resp,
-    class = c(glue("httr2_http_{status}"), "httr2_http", "httr2_error", "rlang_error"),
     request = req,
+    class = c(
+      glue("httr2_http_{status}"),
+      "httr2_http",
+      "httr2_error",
+      "rlang_error"
+    ),
+    use_cli_format = TRUE,
     call = error_call
   ))
 }
@@ -185,8 +190,7 @@ req_perform1 <- function(req, path = NULL, handle = NULL) {
   curl::handle_setopt(handle, cookielist = "FLUSH")
   curl::handle_setopt(handle, cookiefile = NULL, cookiejar = NULL)
 
-  the$last_response <- create_response(req, fetch$curl_data, fetch$body)
-  the$last_response
+  create_response(req, fetch$curl_data, fetch$body)
 }
 
 curl_fetch <- function(handle, url, path) {
@@ -206,35 +210,13 @@ req_verbosity <- function(req, verbosity, error_call = caller_env()) {
     cli::cli_abort("{.arg verbosity} must 0, 1, 2, or 3.", call = error_call)
   }
 
-  switch(verbosity + 1,
+  switch(
+    verbosity + 1,
     req,
     req_verbose(req),
     req_verbose(req, body_req = TRUE, body_resp = TRUE),
     req_verbose(req, body_req = TRUE, body_resp = TRUE, info = TRUE)
   )
-}
-
-#' Retrieve most recent request/response
-#'
-#' These functions retrieve the most recent request made by httr2 and
-#' the response it received, to facilitate debugging problems _after_ they
-#' occur. If the request did not succeed (or no requests have been made)
-#' `last_response()` will be `NULL`.
-#'
-#' @returns An HTTP [response]/[request].
-#' @export
-#' @examples
-#' invisible(request("http://httr2.r-lib.org") |> req_perform())
-#' last_request()
-#' last_response()
-last_response <- function() {
-  the$last_response
-}
-
-#' @export
-#' @rdname last_response
-last_request <- function() {
-  the$last_request
 }
 
 # Must call req_prepare(), then req_handle(), then after the request has been
@@ -256,7 +238,10 @@ req_handle <- function(req) {
 
   handle <- curl::new_handle()
   curl::handle_setopt(handle, url = req$url)
-  curl::handle_setheaders(handle, .list = headers_flatten(req$headers))
+  curl::handle_setheaders(
+    handle,
+    .list = headers_flatten(req$headers, redact = FALSE)
+  )
   curl::handle_setopt(handle, .list = req$options)
   if (length(req$fields) > 0) {
     curl::handle_setform(handle, .list = req$fields)

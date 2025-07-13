@@ -105,17 +105,21 @@
 #'   )
 #' })
 #' str(data)
-req_perform_iterative <- function(req,
-                                  next_req,
-                                  path = NULL,
-                                  max_reqs = 20,
-                                  on_error = c("stop", "return"),
-                                  progress = TRUE) {
+req_perform_iterative <- function(
+  req,
+  next_req,
+  path = NULL,
+  max_reqs = 20,
+  on_error = c("stop", "return"),
+  mock = getOption("httr2_mock", NULL),
+  progress = TRUE
+) {
   check_request(req)
   check_function2(next_req, args = c("resp", "req"))
   check_number_whole(max_reqs, allow_infinite = TRUE, min = 1)
   check_string(path, allow_empty = FALSE, allow_null = TRUE)
   on_error <- arg_match(on_error)
+  mock <- as_mock_function(mock, error_call)
 
   get_path <- function(i) {
     if (is.null(path)) {
@@ -125,23 +129,20 @@ req_perform_iterative <- function(req,
     }
   }
 
-  progress <- create_progress_bar(
-    total = max_reqs,
-    name = "Iterating",
-    config = progress
-  )
+  progress <- create_progress_bar(progress, max_reqs)
 
   resps <- vector("list", length = if (is.finite(max_reqs)) max_reqs else 100)
   i <- 1L
 
-  tryCatch({
+  tryCatch(
     repeat {
-      httr2_error <- switch(on_error,
+      httr2_error <- switch(
+        on_error,
         stop = function(cnd) zap(),
         return = function(cnd) cnd
       )
       resp <- try_fetch(
-        req_perform(req, path = get_path(i)),
+        req_perform(req, path = get_path(i), mock = mock),
         httr2_error = httr2_error
       )
       resps[[i]] <- resp
@@ -176,16 +177,19 @@ req_perform_iterative <- function(req,
         signal("", class = "httr2:::doubled")
         length(resps) <- length(resps) * 2
       }
+    },
+    interrupt = function(cnd) {
+      check_repeated_interrupt()
+
+      # interrupt might occur after i was incremented
+      if (is.null(resps[[i]])) {
+        i <<- i - 1
+      }
+      cli::cli_alert_warning(
+        "Terminating iteration; returning {i} response{?s}."
+      )
     }
-  }, interrupt = function(cnd) {
-    # interrupt might occur after i was incremented
-    if (is.null(resps[[i]])) {
-      i <<- i - 1
-    }
-    cli::cli_alert_warning(
-      "Terminating iteration; returning {i} response{?s}."
-    )
-  })
+  )
   progress$done()
 
   if (i < length(resps)) {

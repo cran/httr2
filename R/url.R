@@ -24,7 +24,7 @@ url_parse <- function(url, base_url = NULL) {
   check_string(url)
   check_string(base_url, allow_null = TRUE)
 
-  curl <- curl::curl_parse_url(url, baseurl = base_url, decode = FALSE)
+  curl <- curl::curl_parse_url(url, baseurl = base_url)
 
   parsed <- list(
     scheme = curl$scheme,
@@ -80,15 +80,17 @@ url_parse <- function(url, base_url = NULL) {
 #' url_modify_relative("http://hadley.nz/a/b/c.html", "/d.html")
 #' url_modify_relative("http://hadley.nz/a/b/c.html", "d.html")
 #' url_modify_relative("http://hadley.nz/a/b/c.html", "../d.html")
-url_modify <- function(url,
-                       scheme = as_is,
-                       hostname = as_is,
-                       username = as_is,
-                       password = as_is,
-                       port = as_is,
-                       path = as_is,
-                       query = as_is,
-                       fragment = as_is) {
+url_modify <- function(
+  url,
+  scheme = as_is,
+  hostname = as_is,
+  username = as_is,
+  password = as_is,
+  port = as_is,
+  path = as_is,
+  query = as_is,
+  fragment = as_is
+) {
   if (!is_string(url) && !is_url(url)) {
     stop_input_type(url, "a string or parsed URL")
   }
@@ -97,13 +99,15 @@ url_modify <- function(url,
     url <- url_parse(url)
   }
 
-  if (!leave_as_is(scheme)) check_string(scheme, allow_null = TRUE)
-  if (!leave_as_is(hostname)) check_string(hostname, allow_null = TRUE)
-  if (!leave_as_is(username)) check_string(username, allow_null = TRUE)
-  if (!leave_as_is(password)) check_string(password, allow_null = TRUE)
-  if (!leave_as_is(port)) check_number_whole(port, min = 1, allow_null = TRUE)
-  if (!leave_as_is(path)) check_string(path, allow_null = TRUE)
-  if (!leave_as_is(fragment)) check_string(fragment, allow_null = TRUE)
+  check_url_component(scheme)
+  check_url_component(hostname)
+  check_url_component(username)
+  check_url_component(password)
+  if (!leave_as_is(port)) {
+    check_number_whole(port, min = 1, max = 65535, allow_null = TRUE)
+  }
+  check_url_component(path)
+  check_url_component(fragment)
 
   if (is_string(query)) {
     query <- url_query_parse(query)
@@ -137,6 +141,13 @@ url_modify <- function(url,
 
 as_is <- quote(as_is)
 leave_as_is <- function(x) identical(x, as_is)
+check_url_component <- function(x, arg = caller_arg(x), call = caller_env()) {
+  if (leave_as_is(x)) {
+    return(invisible(NULL))
+  }
+
+  check_string(x, allow_null = TRUE, arg = arg, call = call)
+}
 
 #' @export
 #' @rdname url_modify
@@ -176,10 +187,11 @@ url_modify_relative <- function(url, relative_url) {
 #'   "percent", uses standard percent encoding (i.e. `%20`), but you can opt-in
 #'   to "form" encoding, which uses `+` instead.
 url_modify_query <- function(
-    .url,
-    ...,
-    .multi = c("error", "comma", "pipe", "explode"),
-    .space = c("percent", "form")) {
+  .url,
+  ...,
+  .multi = c("error", "comma", "pipe", "explode"),
+  .space = c("percent", "form")
+) {
   if (!is_string(.url) && !is_url(.url)) {
     stop_input_type(.url, "a string or parsed URL")
   }
@@ -204,35 +216,35 @@ is_url <- function(x) inherits(x, "httr2_url")
 
 #' @export
 print.httr2_url <- function(x, ...) {
-  cli::cli_text("{.cls {class(x)}} {url_build(x)}")
+  cli::cat_line(cli::format_inline("{.cls {class(x)}} {url_build(x)}"))
   if (!is.null(x$scheme)) {
-    cli::cli_li("{.field scheme}: {x$scheme}")
+    cli::cat_line(cli::format_inline("* {.field scheme}: {x$scheme}"))
   }
   if (!is.null(x$hostname)) {
-    cli::cli_li("{.field hostname}: {x$hostname}")
+    cli::cat_line(cli::format_inline("* {.field hostname}: {x$hostname}"))
   }
   if (!is.null(x$username)) {
-    cli::cli_li("{.field username}: {x$username}")
+    cli::cat_line(cli::format_inline("* {.field username}: {x$username}"))
   }
   if (!is.null(x$password)) {
-    cli::cli_li("{.field password}: {x$password}")
+    cli::cat_line(cli::format_inline("* {.field password}: {x$password}"))
   }
   if (!is.null(x$port)) {
-    cli::cli_li("{.field port}: {x$port}")
+    cli::cat_line(cli::format_inline("* {.field port}: {x$port}"))
   }
   if (!is.null(x$path)) {
-    cli::cli_li("{.field path}: {x$path}")
+    cli::cat_line(cli::format_inline("* {.field path}: {x$path}"))
   }
   if (!is.null(x$query)) {
-    cli::cli_li("{.field query}: ")
-    id <- cli::cli_ul()
-    # escape curly brackets for cli by replacing single with double brackets
-    query_vals <- gsub("{", "{{", gsub("}", "}}", x$query, fixed = TRUE), fixed = TRUE)
-    cli::cli_li(paste0("  {.field ", names(x$query), "}: ", query_vals))
-    cli::cli_end(id)
+    cli::cat_line(cli::format_inline("* {.field query}:"))
+    for (i in seq_along(x$query)) {
+      nm <- names(x$query)[[i]]
+      val <- x$query[[i]]
+      cli::cat_line(cli::format_inline("  * {.field {nm}}: {val}"))
+    }
   }
   if (!is.null(x$fragment)) {
-    cli::cli_li("{.field fragment}: {x$fragment}")
+    cli::cat_line(cli::format_inline("* {.field fragment}: {x$fragment}"))
   }
   invisible(x)
 }
@@ -250,42 +262,21 @@ url_build <- function(url) {
     stop_input_type(url, "a parsed URL")
   }
 
-  if (!is.null(url$query)) {
-    query <- url_query_build(url$query)
+  if (length(url$query) == 0) {
+    query <- ""
   } else {
-    query <- NULL
+    query <- I(url_query_build(url$query))
   }
 
-  if (is.null(url$username) && is.null(url$password)) {
-    user_pass <- NULL
-  } else if (is.null(url$username) && !is.null(url$password)) {
-    cli::cli_abort("Cannot set url {.arg password} without {.arg username}.")
-  } else if (!is.null(url$username) && is.null(url$password)) {
-    user_pass <- paste0(url$username, "@")
-  } else {
-    user_pass <- paste0(url$username, ":", url$password, "@")
-  }
-
-  if (!is.null(user_pass) || !is.null(url$hostname) || !is.null(url$port)) {
-    authority <- paste0(user_pass, url$hostname)
-    if (!is.null(url$port)) {
-      authority <- paste0(authority, ":", url$port)
-    }
-  } else {
-    authority <- NULL
-  }
-
-  if (is.null(url$path) || !startsWith(url$path, "/")) {
-    url$path <- paste0("/", url$path)
-  }
-
-  prefix <- function(prefix, x) if (!is.null(x)) paste0(prefix, x)
-  paste0(
-    url$scheme, if (!is.null(url$scheme)) ":",
-    if (!is.null(url$scheme) || !is.null(authority)) "//",
-    authority, url$path,
-    prefix("?", query),
-    prefix("#", url$fragment)
+  curl::curl_modify_url(
+    scheme = url$scheme,
+    host = url$hostname,
+    user = url$username,
+    password = url$password,
+    port = url$port,
+    path = url$path,
+    query = query,
+    fragment = url$fragment
   )
 }
 
@@ -319,7 +310,10 @@ url_query_parse <- function(query) {
 #' @export
 #' @rdname url_query_parse
 #' @inheritParams url_modify_query
-url_query_build <- function(query, .multi = c("error", "comma", "pipe", "explode")) {
+url_query_build <- function(
+  query,
+  .multi = c("error", "comma", "pipe", "explode")
+) {
   if (!is_named_list(query)) {
     stop_input_type(query, "a named list")
   }
@@ -344,15 +338,19 @@ elements_build <- function(x, name, collapse, error_call = caller_env()) {
   paste0(names, "=", values, collapse = collapse)
 }
 
-format_query_param <- function(x,
-                               name,
-                               multi = FALSE,
-                               form = FALSE,
-                               error_call = caller_env()) {
+format_query_param <- function(
+  x,
+  name,
+  multi = FALSE,
+  form = FALSE,
+  error_call = caller_env()
+) {
   check_query_param(x, name, multi = multi, error_call = error_call)
 
   if (inherits(x, "AsIs")) {
     unclass(x)
+  } else if (is_obfuscated(x)) {
+    x
   } else {
     x <- format(x, scientific = FALSE, trim = TRUE, justify = "none")
     x <- curl::curl_escape(x)
@@ -362,7 +360,12 @@ format_query_param <- function(x,
     x
   }
 }
-check_query_param <- function(x, name, multi = FALSE, error_call = caller_env()) {
+check_query_param <- function(
+  x,
+  name,
+  multi = FALSE,
+  error_call = caller_env()
+) {
   if (inherits(x, "AsIs")) {
     if (multi) {
       ok <- is.character(x)

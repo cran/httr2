@@ -28,7 +28,6 @@ test_that("encryption and decryption of file is symmetric", {
     expect_equal(readLines(path_dec, warn = FALSE), letters)
   })
   expect_false(file.exists(path_dec))
-
 })
 
 test_that("can unobfuscate obfuscated string", {
@@ -47,7 +46,17 @@ test_that("obfuscated strings are hidden", {
 test_that("unobfuscate operates recursively", {
   expect_equal(unobfuscate(NULL), NULL)
   expect_equal(unobfuscate("x"), "x")
-  expect_equal(unobfuscate(list(list(obfuscated("qw6Ua_n2LR_xzuk2uqp2dhb5OaE")))), list(list("test")))
+  expect_equal(
+    unobfuscate(list(list(obfuscated("qw6Ua_n2LR_xzuk2uqp2dhb5OaE")))),
+    list(list("test"))
+  )
+})
+
+test_that("unobfuscated can control behaviour", {
+  x <- list(obfuscated("JKWA-5KOJpjZcuwVYjILoayq4A"))
+  expect_equal(unobfuscate(x, "reveal"), list("abc"))
+  expect_equal(unobfuscate(x, "redact"), list("<REDACTED>"))
+  expect_equal(unobfuscate(x, "remove"), list(NULL))
 })
 
 test_that("secret_has_key returns FALSE/TRUE", {

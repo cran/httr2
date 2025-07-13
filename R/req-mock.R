@@ -1,8 +1,10 @@
 #' Temporarily mock requests
 #'
 #' Mocking allows you to selectively and temporarily replace the response
-#' you would typically receive from a request with your own code. It's
-#' primarily used for testing.
+#' you would typically receive from a request with your own code. These
+#' functions are low-level and we don't recommend using them directly.
+#' Instead use package that uses these functions under the hood, like
+#' \pkg{httptest2} or \pkg{vcr}.
 #'
 #' @param mock A function, a list, or `NULL`.
 #'
@@ -17,7 +19,7 @@
 #'
 #' @param code Code to execute in the temporary environment.
 #' @param env Environment to use for scoping changes.
-#' @returns `with_mock()` returns the result of evaluating `code`.
+#' @returns `with_mocked_responses()` returns the result of evaluating `code`.
 #' @export
 #' @examples
 #' # This function should perform a response against google.com:
@@ -30,33 +32,16 @@
 #' my_mock <- function(req) {
 #'   response(status_code = 403)
 #' }
-#' try(with_mock(my_mock, google()))
+#' try(with_mocked_responses(my_mock, google()))
 with_mocked_responses <- function(mock, code) {
   mock <- as_mock_function(mock)
   withr::with_options(list(httr2_mock = mock), code)
 }
-
-#' @export
-#' @rdname with_mocked_responses
-#' @usage NULL
-with_mock <- function(mock, code) {
-  lifecycle::deprecate_stop("1.1.0", "with_mock()", "with_mocked_responses()")
-  with_mocked_responses(mock, code)
-}
-
 #' @export
 #' @rdname with_mocked_responses
 local_mocked_responses <- function(mock, env = caller_env()) {
   mock <- as_mock_function(mock)
   withr::local_options(httr2_mock = mock, .local_envir = env)
-}
-
-#' @export
-#' @rdname with_mocked_responses
-#' @usage NULL
-local_mock <- function(mock, env = caller_env()) {
-  lifecycle::deprecate_warn("1.1.0", "local_mock()", "local_mocked_responses()")
-  local_mocked_responses(mock, env)
 }
 
 as_mock_function <- function(mock, error_call = caller_env()) {
@@ -67,13 +52,10 @@ as_mock_function <- function(mock, error_call = caller_env()) {
     mock
   } else if (is_formula(mock)) {
     mock <- as_function(mock, call = error_call)
-  } else if (is.list(mock)) {
+  } else if (is_bare_list(mock)) {
     mocked_response_sequence(!!!mock)
   } else {
-    cli::cli_abort(
-      "{.arg mock} must be a function or list, not {.obj_type_friendly {mock}}.",
-      call = error_call
-    )
+    stop_input_type(mock, c("function", "list", "NULL"), call = error_call)
   }
 }
 

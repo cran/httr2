@@ -58,7 +58,11 @@ curl_translate <- function(cmd, simplify_headers = TRUE) {
   cookies <- data$headers$`Cookie`
   data$headers$`Cookie` <- NULL
   if (!is.null(cookies)) {
-    steps <- add_curl_step(steps, "req_cookies_set", dots = cookies_parse(cookies))
+    steps <- add_curl_step(
+      steps,
+      "req_cookies_set",
+      dots = cookies_parse(cookies)
+    )
   }
 
   # Content type set with data
@@ -88,8 +92,13 @@ curl_translate <- function(cmd, simplify_headers = TRUE) {
   if (data$verbose) {
     perform_args$verbosity <- 1
   }
-  steps <- add_curl_step(steps, "req_perform", main_args = perform_args, keep_if_empty = TRUE)
-  out <- paste0(steps, collapse = paste0(pipe(), "\n  "))
+  steps <- add_curl_step(
+    steps,
+    "req_perform",
+    main_args = perform_args,
+    keep_if_empty = TRUE
+  )
+  out <- paste0(steps, collapse = paste0(" |>\n  "))
 
   if (clip) {
     cli::cli_alert_success("Copying to clipboard:")
@@ -98,10 +107,6 @@ curl_translate <- function(cmd, simplify_headers = TRUE) {
 
   out <- paste0(out, "\n")
   structure(out, class = "httr2_cmd")
-}
-
-pipe <- function() {
-  if (getRversion() >= "4.1.0") " |> " else " %>% "
 }
 
 #' @export
@@ -280,11 +285,13 @@ quote_name <- function(x) {
   ifelse(is_syntactic(x), x, encodeString(x, quote = "`"))
 }
 
-add_curl_step <- function(steps,
-                          f,
-                          main_args = NULL,
-                          dots = NULL,
-                          keep_if_empty = FALSE) {
+add_curl_step <- function(
+  steps,
+  f,
+  main_args = NULL,
+  dots = NULL,
+  keep_if_empty = FALSE
+) {
   args <- c(main_args, dots)
 
   if (is_empty(args) && !keep_if_empty) {

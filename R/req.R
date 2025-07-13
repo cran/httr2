@@ -23,26 +23,28 @@ request <- function(base_url) {
 
 #' @export
 print.httr2_request <- function(x, ..., redact_headers = TRUE) {
-  cli::cli_text("{.cls {class(x)}}")
-  method <- toupper(req_method_get(x))
-  cli::cli_text("{.strong {method}} {x$url}")
+  cli::cat_line(cli::format_inline("{.cls {class(x)}}"))
+  method <- toupper(req_get_method(x))
+  cli::cat_line(cli::format_inline("{.strong {method}} {x$url}"))
 
-  bullets_with_header("Headers:", headers_flatten(headers_redact(x$headers, redact_headers)))
-  cli::cli_text("{.strong Body}: {req_body_info(x)}")
+  bullets_with_header("Headers:", headers_flatten(x$headers, redact_headers))
+  cli::cat_line(cli::format_inline("{.strong Body}: {req_body_info(x)}"))
   bullets_with_header("Options:", x$options)
   bullets_with_header("Policies:", x$policies)
 
   invisible(x)
 }
 
-new_request <- function(url,
-                        method = NULL,
-                        headers = list(),
-                        body = NULL,
-                        fields = list(),
-                        options = list(),
-                        policies = list(),
-                        error_call = caller_env()) {
+new_request <- function(
+  url,
+  method = NULL,
+  headers = list(),
+  body = NULL,
+  fields = list(),
+  options = list(),
+  policies = list(),
+  error_call = caller_env()
+) {
   check_string(url, call = error_call)
 
   structure(
@@ -64,10 +66,12 @@ is_request <- function(x) {
   inherits(x, "httr2_request")
 }
 
-check_request <- function(req,
-                          arg = caller_arg(req),
-                          call = caller_env(),
-                          allow_null = FALSE) {
+check_request <- function(
+  req,
+  arg = caller_arg(req),
+  call = caller_env(),
+  allow_null = FALSE
+) {
   if (!missing(req)) {
     if (is_request(req)) {
       return(invisible(NULL))

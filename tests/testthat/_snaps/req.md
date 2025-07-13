@@ -3,28 +3,28 @@
     Code
       req <- request("https://example.com")
       req
-    Message
+    Output
       <httr2_request>
       GET https://example.com
       Body: empty
     Code
-      req %>% req_body_raw("Test")
-    Message
+      req_body_raw(req, "Test")
+    Output
       <httr2_request>
       POST https://example.com
       Body: a string
     Code
-      req %>% req_body_multipart(Test = 1)
-    Message
+      req_body_multipart(req, Test = 1)
+    Output
       <httr2_request>
       POST https://example.com
-      Body: multipart encoded data
+      Body: multipart data
 
 # printing headers works with {}
 
     Code
       req_headers(request("http://test"), x = "{z}", `{z}` = "x")
-    Message
+    Output
       <httr2_request>
       GET http://test
       Headers:
@@ -35,8 +35,8 @@
 # individually prints repeated headers
 
     Code
-      request("https://example.com") %>% req_headers(A = 1:3)
-    Message
+      req_headers(request("https://example.com"), A = 1:3)
+    Output
       <httr2_request>
       GET https://example.com
       Headers:

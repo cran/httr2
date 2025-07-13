@@ -18,6 +18,7 @@
 #'   or see [progress_bars] to customize it in other ways. Not compatible with
 #'   [req_progress()], as httr2 can only display a single progress bar at a
 #'   time.
+#' @inheritParams req_perform
 #' @return
 #' A list, the same length as `reqs`, containing [response]s and possibly
 #' error objects, if `on_error` is `"return"` or `"continue"` and one of the
@@ -49,48 +50,55 @@
 #' resps <- reqs |> req_perform_sequential()
 #' resps_data(resps, \(resp) resp_body_json(resp))
 #' }
-req_perform_sequential <- function(reqs,
-                                   paths = NULL,
-                                   on_error = c("stop", "return", "continue"),
-                                   progress = TRUE) {
+req_perform_sequential <- function(
+  reqs,
+  paths = NULL,
+  on_error = c("stop", "return", "continue"),
+  mock = getOption("httr2_mock", NULL),
+  progress = TRUE
+) {
   if (!is_bare_list(reqs)) {
     stop_input_type(reqs, "a list")
   }
   check_paths(paths, reqs)
   on_error <- arg_match(on_error)
+  mock <- as_mock_function(mock)
 
   err_catch <- on_error != "stop"
   err_return <- on_error == "return"
 
-  progress <- create_progress_bar(
-    total = length(reqs),
-    name = "Iterating",
-    config = progress
-  )
+  progress <- create_progress_bar(progress, length(reqs))
 
   resps <- rep_along(reqs, list())
 
-  tryCatch({
-    for (i in seq_along(reqs)) {
-      check_request(reqs[[i]], arg = glue::glue("req[[{i}]]"))
+  tryCatch(
+    {
+      for (i in seq_along(reqs)) {
+        check_request(reqs[[i]], arg = glue::glue("req[[{i}]]"))
 
-      if (err_catch) {
-        resps[[i]] <- tryCatch(
-          req_perform(reqs[[i]], path = paths[[i]]),
-          httr2_error = function(err) err
-        )
-      } else {
-        resps[[i]] <- req_perform(reqs[[i]], path = paths[[i]])
+        if (err_catch) {
+          resps[[i]] <- tryCatch(
+            req_perform(reqs[[i]], path = paths[[i]], mock = mock),
+            httr2_error = function(err) err
+          )
+        } else {
+          resps[[i]] <- req_perform(reqs[[i]], path = paths[[i]])
+        }
+        if (err_return && is_error(resps[[i]])) {
+          break
+        }
+        progress$update()
       }
-      if (err_return && is_error(resps[[i]])) {
-        break
-      }
-      progress$update()
+    },
+    interrupt = function(cnd) {
+      check_repeated_interrupt()
+
+      resps <- resps[seq_len(i)]
+      cli::cli_alert_warning(
+        "Terminating iteration; returning {i} response{?s}."
+      )
     }
-  }, interrupt = function(cnd) {
-    resps <- resps[seq_len(i)]
-    cli::cli_alert_warning("Terminating iteration; returning {i} response{?s}.")
-  })
+  )
   progress$done()
 
   resps

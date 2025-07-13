@@ -12,6 +12,15 @@ test_that("can perform a single request", {
   resps <- req_perform_parallel(reqs)
   expect_type(resps, "list")
   expect_length(resps, 1)
+
+  resp <- resps[[1]]
+  expect_s3_class(resp, "httr2_response")
+  expect_equal(resp$method, "GET")
+  expect_equal(resp$url, example_url("/get"))
+  expect_equal(resp$status_code, 200)
+  expect_s3_class(resp$headers, "httr2_headers")
+  expect_type(resp$body, "raw")
+  expect_equal(resp$request, reqs[[1]])
 })
 
 test_that("requests happen in parallel", {
@@ -30,7 +39,7 @@ test_that("requests happen in parallel", {
 
 test_that("can perform >128 file uploads in parallel", {
   temp <- withr::local_tempfile(lines = letters)
-  req <- request(example_url()) %>% req_body_file(temp)
+  req <- request(example_url()) |> req_body_file(temp)
   reqs <- rep(list(req), 130)
 
   expect_no_error(req_perform_parallel(reqs, on_error = "continue"))
@@ -59,7 +68,7 @@ test_that("can download 0 byte file", {
 
 test_that("objects are cached", {
   temp <- withr::local_tempdir()
-  req <- request_test("etag/:etag", etag = "abcd") %>% req_cache(temp)
+  req <- request_test("etag/:etag", etag = "abcd") |> req_cache(temp)
 
   expect_condition(
     resps1 <- req_perform_parallel(list(req)),
@@ -73,8 +82,9 @@ test_that("objects are cached", {
 })
 
 test_that("immutable objects retrieved from cache", {
-  req <- request("http://example.com") %>% req_cache(tempfile())
-  resp <- response(200,
+  req <- request("http://example.com") |> req_cache(tempfile())
+  resp <- response(
+    200,
     headers = "Expires: Wed, 01 Jan 3000 00:00:00 GMT",
     body = charToRaw("abc")
   )
@@ -128,8 +138,14 @@ test_that("errors can cancel outstanding requests", {
 
 test_that("req_perform_parallel resspects http_error() error override", {
   reqs <- list2(
-    req_error(request_test("/status/:status", status = 404), is_error = ~FALSE),
-    req_error(request_test("/status/:status", status = 500), is_error = ~FALSE)
+    req_error(
+      request_test("/status/:status", status = 404),
+      is_error = \(resp) FALSE
+    ),
+    req_error(
+      request_test("/status/:status", status = 500),
+      is_error = \(resp) FALSE
+    )
   )
   resps <- req_perform_parallel(reqs)
 
@@ -139,7 +155,10 @@ test_that("req_perform_parallel resspects http_error() error override", {
 
 test_that("req_perform_parallel respects http_error() body message", {
   reqs <- list2(
-    req_error(request_test("/status/:status", status = 404), body = ~"hello")
+    req_error(
+      request_test("/status/:status", status = 404),
+      body = \(resp) "hello"
+    )
   )
   expect_snapshot(req_perform_parallel(reqs), error = TRUE)
 })
@@ -154,7 +173,7 @@ test_that("requests are throttled", {
   )
 
   req <- request_test("/status/:status", status = 200)
-  req <- req %>% req_throttle(capacity = 1, fill_time_s = 1)
+  req <- req |> req_throttle(capacity = 1, fill_time_s = 1)
   reqs <- rep(list(req), 5)
 
   queue <- RequestQueue$new(reqs, progress = FALSE)
@@ -168,10 +187,10 @@ test_that("requests are throttled", {
 test_that("can retry an OAuth failure", {
   req <- local_app_request(function(req, res) {
     if (res$app$locals$i == 1) {
-      res$
-        set_status(401)$
-        set_header("WWW-Authenticate", 'Bearer realm="example", error="invalid_token"')$
-        send_json(list(status = "failed"), auto_unbox = TRUE)
+      res$set_status(401)$set_header(
+        "WWW-Authenticate",
+        'Bearer realm="example", error="invalid_token"'
+      )$send_json(list(status = "failed"), auto_unbox = TRUE)
     } else {
       res$send_json(list(status = "done"), auto_unbox = TRUE)
     }
@@ -179,7 +198,9 @@ test_that("can retry an OAuth failure", {
   req <- req_policies(req, auth_oauth = TRUE)
 
   reset <- 0
-  local_mocked_bindings(req_auth_clear_cache = function(...) reset <<- reset + 1)
+  local_mocked_bindings(
+    req_auth_clear_cache = function(...) reset <<- reset + 1
+  )
 
   queue <- RequestQueue$new(list(req), progress = FALSE)
   queue$process()
@@ -190,10 +211,10 @@ test_that("can retry an OAuth failure", {
 
 test_that("but multiple failures causes an error", {
   req <- local_app_request(function(req, res) {
-    res$
-      set_status(401)$
-      set_header("WWW-Authenticate", 'Bearer realm="example", error="invalid_token"')$
-      send_json(list(status = "failed"), auto_unbox = TRUE)
+    res$set_status(401)$set_header(
+      "WWW-Authenticate",
+      'Bearer realm="example", error="invalid_token"'
+    )$send_json(list(status = "failed"), auto_unbox = TRUE)
   })
   req <- req_policies(req, auth_oauth = TRUE)
 
@@ -205,10 +226,10 @@ test_that("but multiple failures causes an error", {
 test_that("can retry a transient error", {
   req <- local_app_request(function(req, res) {
     if (res$app$locals$i == 1) {
-      res$
-        set_status(429)$
-        set_header("retry-after", 2)$
-        send_json(list(status = "waiting"), auto_unbox = TRUE)
+      res$set_status(429)$set_header("retry-after", 2)$send_json(
+        list(status = "waiting"),
+        auto_unbox = TRUE
+      )
     } else {
       res$send_json(list(status = "done"), auto_unbox = TRUE)
     }
@@ -296,6 +317,24 @@ test_that("throttling is limited by deadline", {
   expect_equal(the$throttle[["test"]]$tokens, 1)
 })
 
+
+test_that("mocking works", {
+  req_200 <- request("https://ok")
+  req_404 <- request("https://notok")
+
+  local_mocked_responses(function(req) {
+    if (req$url == "https://ok") {
+      response()
+    } else {
+      response(404)
+    }
+  })
+
+  resps <- req_perform_parallel(list(req_200, req_404), on_error = "continue")
+  expect_equal(resps[[1]], response())
+  expect_s3_class(resps[[2]], "httr2_http_404")
+})
+
 # Pool helpers ----------------------------------------------------------------
 
 test_that("wait for deadline waits after pool complete", {
@@ -310,14 +349,4 @@ test_that("wait for deadline waits after pool complete", {
 
   expect_true(pool_wait_for_deadline(pool, deadline = 1))
   expect_equal(slept, 1)
-})
-
-# Deprecations ----------------------------------------------------------------
-
-test_that("multi_req_perform is deprecated", {
-  expect_snapshot(multi_req_perform(list()))
-})
-
-test_that("pool argument is deprecated", {
-  expect_snapshot(. <- req_perform_parallel(list(), pool = curl::new_pool()))
 })

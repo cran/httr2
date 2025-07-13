@@ -39,11 +39,13 @@
 #'
 #' # if you need to see it, use redact_headers = FALSE
 #' req |> req_dry_run(redact_headers = FALSE)
-req_dry_run <- function(req,
-                        quiet = FALSE,
-                        redact_headers = TRUE,
-                        testing_headers = is_testing(),
-                        pretty_json = getOption("httr2_pretty_json", TRUE)) {
+req_dry_run <- function(
+  req,
+  quiet = FALSE,
+  redact_headers = TRUE,
+  testing_headers = is_testing(),
+  pretty_json = getOption("httr2_pretty_json", TRUE)
+) {
   check_request(req)
   check_bool(quiet)
   check_bool(redact_headers)
@@ -61,18 +63,21 @@ req_dry_run <- function(req,
   handle <- req_handle(req)
   curl::handle_setopt(handle, url = req$url)
   resp <- curl::curl_echo(handle, progress = FALSE)
+  headers <- new_headers(
+    as.list(resp$headers),
+    redact = which_redacted(req$headers),
+    lifespan = current_env()
+  )
 
   if (!quiet) {
     cli::cat_line(resp$method, " ", resp$path, " HTTP/1.1")
 
-    headers <- new_headers(as.list(resp$headers), attr(req$headers, "redact"))
     if (testing_headers) {
       # curl::curl_echo() overrides
       headers$host <- NULL
       headers$`content-length` <- NULL
     }
-
-    show_headers(headers)
+    show_headers(headers, redact = redact_headers)
     cli::cat_line()
     show_body(resp$body, headers$`content-type`, pretty_json = pretty_json)
   }
@@ -80,7 +85,8 @@ req_dry_run <- function(req,
   invisible(list(
     method = resp$method,
     path = resp$path,
-    headers = as.list(resp$headers)
+    body = resp$body,
+    headers = headers_flatten(headers, redact = redact_headers)
   ))
 }
 

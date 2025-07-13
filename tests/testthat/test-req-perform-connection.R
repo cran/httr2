@@ -6,13 +6,13 @@ test_that("validates inputs", {
 })
 
 test_that("correctly prepares request", {
-  req <- request_test("/post") %>% req_method("POST")
+  req <- request_test("/post") |> req_method("POST")
   expect_no_error(resp <- req_perform_connection(req))
   close(resp)
 })
 
 test_that("can read all data from a connection", {
-  resp <- request_test("/stream-bytes/2048") %>% req_perform_connection()
+  resp <- request_test("/stream-bytes/2048") |> req_perform_connection()
   withr::defer(close(resp))
 
   out <- resp_body_raw(resp)
@@ -33,10 +33,10 @@ test_that("reads body on error", {
 test_that("can retry a transient error", {
   req <- local_app_request(function(req, res) {
     if (res$app$locals$i == 1) {
-      res$
-        set_status(429)$
-        set_header("retry-after", 0)$
-        send_json(list(status = "waiting"), auto_unbox = TRUE)
+      res$set_status(429)$set_header("retry-after", 0)$send_json(
+        list(status = "waiting"),
+        auto_unbox = TRUE
+      )
     } else {
       res$send_json(list(status = "done"), auto_unbox = TRUE)
     }
@@ -64,8 +64,39 @@ test_that("curl errors become errors", {
 
   # and captures request
   cnd <- catch_cnd(req_perform_connection(req), classes = "error")
-  expect_equal(cnd$request, req)
+  expect_equal(cnd$request, req_policies(req, connection = TRUE))
 
   # But last_response() is NULL
   expect_null(last_response())
+})
+
+test_that("mocking works", {
+  req_200 <- request("https://ok")
+  req_404 <- request("https://notok")
+
+  local_mocked_responses(function(req) {
+    expect_equal(req$policies$connection, TRUE)
+    if (req$url == "https://ok") {
+      conn <- rawConnection(charToRaw("a\nb\n"))
+      response(body = StreamingBody$new(conn))
+    } else {
+      response(404)
+    }
+  })
+
+  resp <- req_perform_connection(req_200)
+  expect_equal(resp_stream_lines(resp), "a")
+  expect_equal(resp_stream_lines(resp), "b")
+  close(resp)
+
+  expect_error(req_perform_connection(req_404), class = "httr2_http_404")
+})
+
+
+# StreamingBody --------------------------------------------------------------
+
+test_that("validates its input", {
+  expect_snapshot(error = TRUE, {
+    StreamingBody$new(1)
+  })
 })

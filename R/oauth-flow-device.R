@@ -10,6 +10,9 @@
 #' <https://httr2.r-lib.org/articles/oauth.html>.
 #'
 #' @export
+#' @param open_browser If `TRUE` (the default in interactive sessions), the
+#'   device verification URL will be opened in the user's browser. If `FALSE`,
+#'   the URL is printed to the console and the user must open it themselves.
 #' @inheritParams oauth_flow_password
 #' @inheritParams req_oauth_auth_code
 #' @returns `req_oauth_device()` returns a modified HTTP [request] that will
@@ -25,19 +28,22 @@
 #'
 #' request("https://api.github.com/user") |>
 #'   req_auth_github()
-req_oauth_device <- function(req,
-                             client,
-                             auth_url,
-                             scope = NULL,
-                             auth_params = list(),
-                             token_params = list(),
-                             cache_disk = FALSE,
-                             cache_key = NULL) {
-
+req_oauth_device <- function(
+  req,
+  client,
+  auth_url,
+  scope = NULL,
+  open_browser = is_interactive(),
+  auth_params = list(),
+  token_params = list(),
+  cache_disk = FALSE,
+  cache_key = NULL
+) {
   params <- list(
     client = client,
     auth_url = auth_url,
     scope = scope,
+    open_browser = open_browser,
     auth_params = auth_params,
     token_params = token_params
   )
@@ -47,13 +53,16 @@ req_oauth_device <- function(req,
 
 #' @export
 #' @rdname req_oauth_device
-oauth_flow_device <- function(client,
-                              auth_url,
-                              pkce = FALSE,
-                              scope = NULL,
-                              auth_params = list(),
-                              token_params = list()) {
-  oauth_flow_check("device", client, interactive = is_interactive())
+oauth_flow_device <- function(
+  client,
+  auth_url,
+  pkce = FALSE,
+  scope = NULL,
+  open_browser = is_interactive(),
+  auth_params = list(),
+  token_params = list()
+) {
+  oauth_flow_check("device", client, interactive = open_browser)
 
   if (pkce) {
     code <- oauth_flow_auth_code_pkce()
@@ -70,10 +79,14 @@ oauth_flow_device <- function(client,
   # Google uses verification_url instead of verification_uri
   # verification_uri_complete is optional, it would ship the user
   # code in the uri https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
-  url <- request$verification_uri_complete %||% request$verification_uri %||% request$verification_url
+  url <- request$verification_uri_complete %||%
+    request$verification_uri %||%
+    request$verification_url
 
-  if (is_interactive()) {
-    cli::cli_alert("Copy {.strong {request$user_code}} and paste when requested by the browser")
+  if (open_browser) {
+    cli::cli_alert(
+      "Copy {.strong {request$user_code}} and paste when requested by the browser"
+    )
     readline("Press <enter> to proceed:")
     utils::browseURL(url)
   } else {
@@ -91,11 +104,13 @@ oauth_flow_device <- function(client,
 # Device authorization request and response
 # https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
 # https://datatracker.ietf.org/doc/html/rfc8628#section-3.2
-oauth_flow_device_request <- function(client,
-                                      auth_url,
-                                      scope,
-                                      auth_params,
-                                      error_call = caller_env()) {
+oauth_flow_device_request <- function(
+  client,
+  auth_url,
+  scope,
+  auth_params,
+  error_call = caller_env()
+) {
   req <- request(auth_url)
   req <- req_body_form(req, scope = scope, !!!auth_params)
   req <- oauth_client_req_auth(req, client)
@@ -106,10 +121,12 @@ oauth_flow_device_request <- function(client,
 
 # Device Access Token Request
 # https://datatracker.ietf.org/doc/html/rfc8628#section-3.4
-oauth_flow_device_poll <- function(client,
-                                   request,
-                                   token_params,
-                                   error_call = caller_env()) {
+oauth_flow_device_poll <- function(
+  client,
+  request,
+  token_params,
+  error_call = caller_env()
+) {
   cli::cli_progress_step("Waiting for response from server", spinner = TRUE)
 
   delay <- request$interval %||% 5
@@ -124,7 +141,8 @@ oauth_flow_device_poll <- function(client,
 
     tryCatch(
       {
-        token <- oauth_client_get_token(client,
+        token <- oauth_client_get_token(
+          client,
           grant_type = "urn:ietf:params:oauth:grant-type:device_code",
           device_code = request$device_code,
           !!!token_params,

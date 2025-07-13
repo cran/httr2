@@ -28,8 +28,6 @@
 #' the circuit breaker is never triggered.
 #'
 #' @inherit req_perform_sequential params return
-#' @param pool `r lifecycle::badge("deprecated")`. No longer supported;
-#'   to control the maximum number of concurrent requests, set `max_active`.
 #' @param max_active Maximum number of concurrent requests.
 #' @export
 #' @examples
@@ -64,20 +62,15 @@
 req_perform_parallel <- function(
   reqs,
   paths = NULL,
-  pool = deprecated(),
   on_error = c("stop", "return", "continue"),
   progress = TRUE,
-  max_active = 10
+  max_active = 10,
+  mock = getOption("httr2_mock", NULL)
 ) {
   check_paths(paths, reqs)
-  if (lifecycle::is_present(pool)) {
-    lifecycle::deprecate_warn(
-      when = "1.1.0",
-      what = "req_perform_parallel(pool)"
-    )
-  }
   on_error <- arg_match(on_error)
   check_number_whole(max_active, min = 1)
+  mock <- as_mock_function(mock, error_call)
 
   queue <- RequestQueue$new(
     reqs = reqs,
@@ -85,19 +78,25 @@ req_perform_parallel <- function(
     max_active = max_active,
     on_error = on_error,
     progress = progress,
-    error_call = environment()
+    mock = mock,
+    frame = environment()
   )
 
   tryCatch(
     queue$process(),
     interrupt = function(cnd) {
+      check_repeated_interrupt()
+
       queue$queue_status <- "errored"
       queue$process()
 
       n <- sum(!map_lgl(queue$resps, is.null))
-      cli::cli_alert_warning("Terminating iteration; returning {n} response{?s}.")
+      cli::cli_alert_warning(
+        "Terminating iteration; returning {n} response{?s}."
+      )
     }
   )
+  queue$progress$done()
 
   if (on_error == "stop") {
     is_error <- map_lgl(queue$resps, is_error)
@@ -127,6 +126,7 @@ RequestQueue <- R6::R6Class(
     n_complete = 0,
     n_retries = 0,
     on_error = "stop",
+    mock = NULL,
     progress = NULL,
 
     # Vectorised along reqs
@@ -146,21 +146,21 @@ RequestQueue <- R6::R6Class(
       max_active = 10,
       on_error = "stop",
       progress = FALSE,
-      error_call = caller_env()
+      mock = NULL,
+      frame = caller_env()
     ) {
       n <- length(reqs)
 
-      if (isTRUE(progress)) {
-        self$progress <- cli::cli_progress_bar(
-          total = n,
-          format = paste0(
-            "[{self$queue_status}] ",
-            "({self$n_pending} + {self$n_retries}) -> {self$n_active} -> {self$n_complete} | ",
-            "{cli::pb_bar} {cli::pb_percent}"
-          ),
-          .envir = error_call
-        )
-      }
+      self$progress <- create_progress_bar(
+        progress,
+        total = n,
+        format = paste0(
+          "[{self$queue_status}] ",
+          "({self$n_pending} + {self$n_retries}) -> {self$n_active} -> {self$n_complete} | ",
+          "{cli::pb_bar} {cli::pb_percent}"
+        ),
+        frame = frame
+      )
 
       # goal is for pool to not do any queueing; i.e. the curl pool will
       # only ever contain requests that we actually want to process. Any
@@ -172,6 +172,7 @@ RequestQueue <- R6::R6Class(
         max_streams = 100
       )
       self$on_error <- on_error
+      self$mock <- mock
 
       self$queue_status <- "working"
       self$n_pending <- n
@@ -186,7 +187,8 @@ RequestQueue <- R6::R6Class(
           on_success = function(resp) self$done_success(i, resp),
           on_failure = function(error) self$done_failure(i, error),
           on_error = function(error) self$done_error(i, error),
-          error_call = error_call
+          mock = mock,
+          error_call = frame
         )
       })
       self$resps <- vector("list", n)
@@ -213,9 +215,7 @@ RequestQueue <- R6::R6Class(
         return(FALSE)
       }
 
-      if (!is.null(self$progress)) {
-        cli::cli_progress_update(id = self$progress, set = self$n_complete)
-      }
+      self$progress$update(set = self$n_complete)
 
       if (self$queue_status == "waiting") {
         request_deadline <- max(self$token_deadline, self$rate_limit_deadline)
@@ -229,7 +229,11 @@ RequestQueue <- R6::R6Class(
         } else {
           waiting <- "for throttling"
         }
-        pool_wait_for_deadline(self$pool, min(request_deadline, deadline), waiting)
+        pool_wait_for_deadline(
+          self$pool,
+          min(request_deadline, deadline),
+          waiting
+        )
         NULL
       } else if (self$queue_status == "working") {
         if (self$n_pending == 0 && self$n_active == 0) {
@@ -316,13 +320,13 @@ RequestQueue <- R6::R6Class(
     },
 
     set_status = function(i, status) {
-      switch( # old status
-        self$status[[i]],
+      switch(
+        self$status[[i]], # old status
         pending = self$n_pending <- self$n_pending - 1,
         active = self$n_active <- self$n_active - 1
       )
-      switch( # new status
-        status,
+      switch(
+        status, # new status
         pending = self$n_pending <- self$n_pending + 1,
         active = self$n_active <- self$n_active + 1,
         complete = self$n_complete <- self$n_complete + 1
@@ -371,42 +375,4 @@ pool_wait <- function(pool, poll, timeout) {
   signal("", class = "httr2_pool_wait", timeout = timeout)
   done <- curl::multi_run(pool = pool, poll = poll, timeout = timeout)
   (done$success + done$error) > 0 || done$pending == 0
-}
-
-
-#' Perform a list of requests in parallel
-#'
-#' @description
-#' `r lifecycle::badge("deprecated")`
-#'
-#' Please use [req_perform_parallel()] instead, and note:
-#'
-#' * `cancel_on_error = FALSE` is now `on_error = "continue"`
-#' * `cancel_on_error = TRUE` is now `on_error = "return"`
-#'
-#' @export
-#' @param cancel_on_error Should all pending requests be cancelled when you
-#'   hit an error? Set this to `TRUE` to stop all requests as soon as you
-#'   hit an error. Responses that were never performed be `NULL` in the result.
-#' @inheritParams req_perform_parallel
-#' @keywords internal
-multi_req_perform <- function(
-  reqs,
-  paths = NULL,
-  pool = deprecated(),
-  cancel_on_error = FALSE
-) {
-  lifecycle::deprecate_warn(
-    "1.0.0",
-    "multi_req_perform()",
-    "req_perform_parallel()"
-  )
-  check_bool(cancel_on_error)
-
-  req_perform_parallel(
-    reqs = reqs,
-    paths = paths,
-    pool = pool,
-    on_error = if (cancel_on_error) "continue" else "return"
-  )
 }

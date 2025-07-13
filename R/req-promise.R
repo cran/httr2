@@ -29,7 +29,7 @@
 #'
 #' @inheritParams req_perform
 #' @inheritParams req_perform_parallel
-#'
+#' @param pool A pool created by [curl::new_pool()].
 #' @return a [promises::promise()] object which resolves to a [response] if
 #' successful or rejects on the same errors thrown by [req_perform()].
 #' @export
@@ -67,15 +67,19 @@
 #' # See the [promises package documentation](https://rstudio.github.io/promises/)
 #' # for more information on working with promises
 #' }
-req_perform_promise <- function(req,
-                                path = NULL,
-                                pool = NULL,
-                                verbosity = NULL) {
+req_perform_promise <- function(
+  req,
+  path = NULL,
+  pool = NULL,
+  verbosity = NULL,
+  mock = getOption("httr2_mock", NULL)
+) {
   check_installed(c("promises", "later"))
 
   check_request(req)
   check_string(path, allow_null = TRUE)
   verbosity <- verbosity %||% httr2_verbosity()
+  mock <- as_mock_function(mock)
 
   if (missing(pool)) {
     if (!identical(later::current_loop(), later::global_loop())) {
@@ -98,7 +102,8 @@ req_perform_promise <- function(req,
       path = path,
       on_success = function(resp) resolve(resp),
       on_failure = function(error) reject(error),
-      on_error = function(error) reject(error)
+      on_error = function(error) reject(error),
+      mock = mock
     )
     pooled_req$submit(pool)
     ensure_pool_poller(pool, reject)
@@ -107,7 +112,9 @@ req_perform_promise <- function(req,
 
 ensure_pool_poller <- function(pool, reject) {
   monitor <- pool_poller_monitor(pool)
-  if (monitor$already_going()) return()
+  if (monitor$already_going()) {
+    return()
+  }
 
   poll_pool <- function(ready) {
     tryCatch(
@@ -125,7 +132,8 @@ ensure_pool_poller <- function(pool, reject) {
         } else {
           monitor$ending()
         }
-      }, error = function(cnd) {
+      },
+      error = function(cnd) {
         monitor$ending()
         reject(cnd)
       }
@@ -139,7 +147,9 @@ ensure_pool_poller <- function(pool, reject) {
 pool_poller_monitor <- function(pool) {
   pool_address <- obj_address(pool)
   list(
-    already_going = function() env_get(the$pool_pollers, pool_address, default = FALSE),
+    already_going = function() {
+      env_get(the$pool_pollers, pool_address, default = FALSE)
+    },
     starting = function() env_poke(the$pool_pollers, pool_address, TRUE),
     ending = function() env_unbind(the$pool_pollers, pool_address)
   )

@@ -1,11 +1,9 @@
 #' Perform a request and handle data as it streams back
 #'
 #' @description
-#' `r lifecycle::badge("superseded")`
+#' `r lifecycle::badge("deprecated")`
 #'
-#' We now recommend [req_perform_connection()] since it has a considerably more
-#' flexible interface. Unless I hear compelling reasons otherwise, I'm likely
-#' to deprecate `req_perform_stream()` in a future release.
+#' Please use [req_perform_connection()] instead.
 #'
 #' After preparing a request, call `req_perform_stream()` to perform the request
 #' and handle the result with a streaming callback. This is useful for
@@ -30,6 +28,7 @@
 #'   will contain the HTTP response body if the request was unsuccessful.
 #' @export
 #' @examples
+#' # PREVIOSULY
 #' show_bytes <- function(x) {
 #'   cat("Got ", length(x), " bytes\n", sep = "")
 #'   TRUE
@@ -37,12 +36,31 @@
 #' resp <- request(example_url()) |>
 #'   req_url_path("/stream-bytes/100000") |>
 #'   req_perform_stream(show_bytes, buffer_kb = 32)
-#' resp
-req_perform_stream <- function(req,
-                               callback,
-                               timeout_sec = Inf,
-                               buffer_kb = 64,
-                               round = c("byte", "line")) {
+#'
+#' # NOW
+#' resp <- request(example_url()) |>
+#'   req_url_path("/stream-bytes/100000") |>
+#'   req_perform_connection()
+#' while (!resp_stream_is_complete(resp)) {
+#'   x <-  resp_stream_raw(resp, kb = 32)
+#'   cat("Got ", length(x), " bytes\n", sep = "")
+#' }
+#' close(resp)
+req_perform_stream <- function(
+  req,
+  callback,
+  timeout_sec = Inf,
+  buffer_kb = 64,
+  round = c("byte", "line")
+) {
+  # soft deprecated because quite a few packages use it, and it was our
+  # recommended approach for a while
+  lifecycle::deprecate_soft(
+    when = "1.2.0",
+    what = "req_perform_stream()",
+    with = "req_perform_connection()"
+  )
+
   check_request(req)
 
   check_function(callback)
@@ -53,15 +71,15 @@ req_perform_stream <- function(req,
   stop_time <- Sys.time() + timeout_sec
 
   resp <- req_perform_connection(req)
-  stream <- resp$body
-  withr::defer(close(stream))
+  close <- resp$body$close
+  withr::defer(close())
 
   continue <- TRUE
   incomplete <- TRUE
   buf <- raw()
 
-  while (continue && isIncomplete(stream) && Sys.time() < stop_time) {
-    buf <- c(buf, readBin(stream, raw(), buffer_kb * 1024))
+  while (continue && !resp$body$is_complete() && Sys.time() < stop_time) {
+    buf <- c(buf, resp$body$read(buffer_kb * 1024))
 
     if (length(buf) > 0) {
       cut <- cut_points(buf)
@@ -87,14 +105,17 @@ req_perform_stream <- function(req,
 
 # Helpers ----------------------------------------------------------------------
 
-as_round_function <- function(round = c("byte", "line"),
-                              error_call = caller_env()) {
+as_round_function <- function(
+  round = c("byte", "line"),
+  error_call = caller_env()
+) {
   if (is.function(round)) {
     check_function2(round, args = "bytes")
     round
   } else if (is.character(round)) {
     round <- arg_match(round, error_call = error_call)
-    switch(round,
+    switch(
+      round,
       byte = function(bytes) length(bytes),
       line = function(bytes) which(bytes == charToRaw("\n"))
     )
@@ -104,22 +125,4 @@ as_round_function <- function(round = c("byte", "line"),
       call = error_call
     )
   }
-}
-
-#' @export
-#' @rdname req_perform_stream
-#' @usage NULL
-req_stream <- function(req, callback, timeout_sec = Inf, buffer_kb = 64) {
-  lifecycle::deprecate_warn(
-    "1.0.0",
-    "req_stream()",
-    "req_perform_stream()"
-  )
-
-  req_perform_stream(
-    req = req,
-    callback = callback,
-    timeout_sec = timeout_sec,
-    buffer_kb = buffer_kb
-  )
 }

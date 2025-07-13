@@ -3,7 +3,7 @@ bullets_with_header <- function(header, x) {
     return()
   }
 
-  cli::cli_text("{.strong {header}}")
+  cli::cat_line(cli::format_inline("{.strong {header}}"))
   bullets(x)
 }
 
@@ -16,7 +16,7 @@ bullets <- function(x) {
         format(x)
       }
     } else {
-      if (is_redacted(x)) {
+      if (is_redacted_sentinel(x)) {
         format(x)
       } else {
         paste0("<", class(x)[[1L]], ">")
@@ -28,13 +28,20 @@ bullets <- function(x) {
   names <- gsub(" ", "\u00a0", names, fixed = TRUE)
 
   for (i in seq_along(x)) {
-    cli::cli_li("{.field {names[[i]]}}: {vals[[i]]}")
+    cli::cat_line(cli::format_inline("* {.field {names[[i]]}}: {vals[[i]]}"))
   }
 }
 
-modify_list <- function(.x, ..., .ignore_case = FALSE, error_call = caller_env()) {
+modify_list <- function(
+  .x,
+  ...,
+  .ignore_case = FALSE,
+  error_call = caller_env()
+) {
   dots <- list2(...)
-  if (length(dots) == 0) return(.x)
+  if (length(dots) == 0) {
+    return(.x)
+  }
 
   if (!is_named(dots)) {
     cli::cli_abort(
@@ -84,7 +91,12 @@ sys_sleep <- function(seconds, task, fps = 10, progress = NULL) {
     total = seconds * fps
   )
 
-  while ({left <- start + seconds - cur_time(); left > 0}) {
+  while (
+    {
+      left <- start + seconds - cur_time()
+      left > 0
+    }
+  ) {
     Sys.sleep(min(1 / fps, left))
     cli::cli_progress_update(set = (seconds - left) * fps)
   }
@@ -166,12 +178,14 @@ local_write_lines <- function(..., .env = caller_env()) {
   path
 }
 
-check_function2 <- function(x,
-                            ...,
-                            args = NULL,
-                            allow_null = FALSE,
-                            arg = caller_arg(x),
-                            call = caller_env()) {
+check_function2 <- function(
+  x,
+  ...,
+  args = NULL,
+  allow_null = FALSE,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
   check_function(
     x = x,
     allow_null = allow_null,
@@ -191,10 +205,7 @@ check_function2 <- function(x,
 
 # Basically copied from rlang. Can be removed when https://github.com/r-lib/rlang/pull/1652
 # is merged
-.check_function_args <- function(f,
-                                 expected_args,
-                                 arg,
-                                 call) {
+.check_function_args <- function(f, expected_args, arg, call) {
   if (is_null(expected_args)) {
     return(invisible(NULL))
   }
@@ -215,7 +226,11 @@ check_function2 <- function(x,
   }
 
   cli::cli_abort(
-    paste0("{.arg {arg}} must have the {cli::qty(n_expected_args)}argument{?s} {.arg {expected_args}}; ", arg_info, "."),
+    paste0(
+      "{.arg {arg}} must have the {cli::qty(n_expected_args)}argument{?s} {.arg {expected_args}}; ",
+      arg_info,
+      "."
+    ),
     call = call,
     arg = arg
   )
@@ -223,46 +238,50 @@ check_function2 <- function(x,
 
 # This is inspired by the C interface of `cli_progress_bar()` which has just
 # 2 arguments: `total` and `config`
-create_progress_bar <- function(total,
-                                name,
-                                config,
-                                env = caller_env(),
-                                config_arg = caller_arg(config),
-                                error_call = caller_env()) {
-  if (is_false(config)) {
+create_progress_bar <- function(
+  progress,
+  total,
+  name = "iterating",
+  format = NULL,
+  envir = caller_env(),
+  frame = caller_env()
+) {
+  if (is_false(progress)) {
     return(list(
       update = function(...) {},
       done = function() {}
     ))
   }
 
-  if (is.null(config) || is_bool(config)) {
+  if (is.null(progress) || isTRUE(progress)) {
     args <- list()
-  } else if (is_scalar_character(config)) {
-    args <- list(name = config)
-  } else if (is.list(config)) {
-    args <- config
+    args$name <- name
+    args$format <- format
+  } else if (is_scalar_character(progress)) {
+    args <- list(name = progress)
+  } else if (is.list(progress)) {
+    args <- progress
+    args$name <- args$name %||% name
+    args$format <- args$format %||% format
   } else {
     stop_input_type(
-      config,
+      progress,
       what = c("a bool", "a string", "a list"),
-      arg = config_arg,
-      call = error_call
+      call = frame
     )
   }
 
-  args$name <- args[["name"]] %||% name
-  # Can be removed if https://github.com/r-lib/cli/issues/630 is fixed
-  if (is.infinite(total)) {
-    total <- NA
-  }
   args$total <- total
-  args$.envir <- env
+  args$.envir <- envir
+  args$.auto_close <- FALSE
 
   id <- exec(cli::cli_progress_bar, !!!args)
+  withr::defer(cli::cli_progress_done(id = id), envir = frame)
 
   list(
-    update = function(...) cli::cli_progress_update(..., id = id),
+    update = function(...) {
+      cli::cli_progress_update(..., id = id, .envir = envir)
+    },
     done = function() cli::cli_progress_done(id = id)
   )
 }
@@ -270,21 +289,6 @@ create_progress_bar <- function(total,
 imap <- function(.x, .f, ...) {
   map2(.x, names(.x), .f, ...)
 }
-
-read_con <- function(con, buffer = 32 * 1024) {
-  bytes <- raw()
-  repeat {
-    new <- readBin(con, "raw", n = buffer)
-    if (length(new) == 0) break
-    bytes <- c(bytes, new)
-  }
-  if (length(bytes) == 0) {
-    NULL
-  } else {
-    bytes
-  }
-}
-
 
 # Slices the vector using the only sane semantics: start inclusive, end
 # exclusive.
@@ -323,4 +327,18 @@ pretty_json <- function(x) {
 log_stream <- function(..., prefix = "<< ") {
   out <- gsub("\n", paste0("\n", prefix), paste0(prefix, ..., collapse = ""))
   cli::cat_line(out)
+}
+
+paste_c <- function(..., collapse = "") {
+  paste0(c(...), collapse = collapse)
+}
+
+# Give user the get-out-of-jail-free card if interrupt-capturing function
+# is wrapped inside a loop
+check_repeated_interrupt <- function() {
+  if (as.double(Sys.time()) - the$last_interrupt < 1) {
+    cli::cli_alert_warning("Interrupting")
+    interrupt()
+  }
+  the$last_interrupt <- as.double(Sys.time())
 }

@@ -72,10 +72,12 @@ req_url_relative <- function(req, url) {
 #' @export
 #' @rdname req_url
 #' @inheritParams url_modify_query
-req_url_query <- function(.req,
-                          ...,
-                          .multi = c("error", "comma", "pipe", "explode"),
-                          .space = c("percent", "form")) {
+req_url_query <- function(
+  .req,
+  ...,
+  .multi = c("error", "comma", "pipe", "explode"),
+  .space = c("percent", "form")
+) {
   check_request(.req)
   url <- url_modify_query(.req$url, ..., .multi = .multi, .space = .space)
   req_url(.req, url)
@@ -101,6 +103,24 @@ req_url_path_append <- function(req, ...) {
 
   req_url(req, url_build(url))
 }
+
+#' Get request URL
+#'
+#' Retrieve the URL from a request.
+#'
+#' @inheritParams req_perform
+#' @returns A character string.
+#' @export
+#' @examples
+#' request("https://httpbin.org") |>
+#'   req_url_path("/get") |>
+#'   req_url_query(hello = "world") |>
+#'   req_get_url()
+req_get_url <- function(req) {
+  check_request(req)
+  req$url
+}
+
 
 dots_to_path <- function(...) {
   path <- paste(c(...), collapse = "/")
