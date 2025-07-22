@@ -1,3 +1,7 @@
+# httr2 1.2.1
+
+* Colons in paths are no longer escaped.
+
 # httr2 1.2.0
 
 ## Lifecycle changes
@@ -16,7 +20,7 @@
 
 * Redacted headers are no longer serialized to disk. This is important since it 
   makes it harder to accidentally leak secrets to files on disk, but comes at a 
-  cost: you can longer perform such requests that have been saved and reloaded 
+  cost: you can no longer perform such requests that have been saved and reloaded 
   (#721).
 
 * URL construction is now powered by `curl::curl_modify_url()`, and hence now 
@@ -34,9 +38,9 @@
 * New `resp_timing()` exposes timing information about the request measured 
   by libcurl (@arcresu, #725).
 
-## Minor improvements bug fixues
+## Minor improvements and bug fixes
 
-* Functions that capture interrutps (like `req_perform_parallel()` and friends) 
+* Functions that capture interrupts (like `req_perform_parallel()` and friends) 
   are now easier to escape if they're called inside a loop: you can press 
   Ctrl + C twice to guarantee an exit (#1810).
 

@@ -1,7 +1,7 @@
-e25992f7025a646deb628260ebd38937 *DESCRIPTION
+396d8af6c150a602261c714382cad8b9 *DESCRIPTION
 67c32986371e772e798cc5d9f2dcc504 *LICENSE
 282c74906fd17d5d9d9360365d58ceda *NAMESPACE
-0e686285f1df720d5b7ca3b79cf74429 *NEWS.md
+685a4e0630cd088473a39806d37ed0cf *NEWS.md
 6ea3c7ac74c27b4e92c9b5c8276c0fe2 *R/content-type.R
 d0ac46b16162fdc8a9dcf8825567d633 *R/curl.R
 11aa494fb8e5c4fe51af9f745c1337ae *R/headers.R
@@ -40,7 +40,7 @@ dcfc6625089a6b8abac3dff632022810 *R/req-headers.R
 ba50265026f61b39ec05464a699e1a69 *R/req-method.R
 4cd4f57b7fdc0651d95486f010c72766 *R/req-mock.R
 f4e64b9cf60087e81798226b53da625b *R/req-options.R
-45e7d6e17c06040dd0f7b8e369b141e0 *R/req-perform-connection.R
+7cc2d65242639dbb20c49fff2228a5b2 *R/req-perform-connection.R
 17cd2fe4a51ceb316e3f0a6d5cd60470 *R/req-perform-iterative.R
 6453f08e49a0456bf63f98169d9b923d *R/req-perform-parallel.R
 299f8d60d920c1039bdfdc99836a9f84 *R/req-perform-sequential.R
@@ -68,7 +68,7 @@ a0454661bad596f3ed4276bca0f66863 *R/roxygen2.R
 3104888dd500bd7d8fb12755e4df7d51 *R/secret.R
 18fbe8fc2497eef4d6f13c7e45f5508f *R/sysdata.rda
 611b30e129c4c5d475f72c464a8a1582 *R/test.R
-bd890ad34eb355452fd0c3789b41c10b *R/url.R
+e221fbf8eff87b1ca1efb6600cb6449d *R/url.R
 4dc37a399b21bef8fc463e52af7ed12e *R/utils-multi.R
 b56ff2b193ecba52f9ec7f3b10cca008 *R/utils-pipe.R
 349ce558b33cf59505cb72f74a5dc190 *R/utils-redacted.R
@@ -79,8 +79,8 @@ bc41593abd2a492a7bba4e42a21d57e8 *R/verbosity.R
 a184e1beca63cd101be9267905b5b71c *build/vignette.rds
 62d1743a605c7aa827b5742a25950087 *inst/doc/httr2.R
 4b468150c2b2549e54c9a7eb6766e50e *inst/doc/httr2.Rmd
-b6f654d9e8f2b85e9a11bbc76331fce4 *inst/doc/httr2.html
-fce0ca644020283b383896d1d671b3a1 *man/StreamingBody.Rd
+44de4adf53553c2b32744772be4af533 *inst/doc/httr2.html
+8d6cbc5b87f14eb4a6a56f650d261fc4 *man/StreamingBody.Rd
 8ac6a7b7aac968e8a0e93c58049261ef *man/curl_translate.Rd
 1b8a5c50c6bdd9235e70186f9c3aeb70 *man/example_url.Rd
 a1cbaf3f328e8d74e747faacf640c7fc *man/figures/lifecycle-archived.svg
@@ -248,7 +248,7 @@ f190fd67585d23db46666d501193c9bd *tests/testthat/test-req-body.R
 a4c2397fc2df9990a203d77191593094 *tests/testthat/test-req-method.R
 e25e0c4f93eb232ee4f6ca63df1b4094 *tests/testthat/test-req-mock.R
 f4718d1b6d7af0c1d2caa2f7688f96c6 *tests/testthat/test-req-options.R
-95a9ef4504662201d1444815e67b2402 *tests/testthat/test-req-perform-connection.R
+3f44e7457659d5c380252860caf0dbd5 *tests/testthat/test-req-perform-connection.R
 5be02d74f062de3487e54c8d4bfa25d7 *tests/testthat/test-req-perform-iterative-helpers.R
 6d3ec8a9144133090eb42a027c84d50b *tests/testthat/test-req-perform-iterative-responses.R
 89ed240a0aa89696d5a255ab88771431 *tests/testthat/test-req-perform-iterative.R
@@ -274,7 +274,7 @@ e7ed3ff22a6c857f33dd1703615f1769 *tests/testthat/test-resp-status.R
 5faeeaa3ac8e1ca8fa0d11c13962d6dd *tests/testthat/test-resp-url.R
 4750d96215ffdcc3bd74e7948a52fa41 *tests/testthat/test-resp.R
 2838b9aa15bad285c59ab7cb883c2a1c *tests/testthat/test-secret.R
-ec6e5e4199ba38a2f606752f022aed02 *tests/testthat/test-url.R
+065a69a47be1885c07f6ac211ad5d12a *tests/testthat/test-url.R
 b08e521993a4d1f42a084c2e66a4c217 *tests/testthat/test-utils-multi.R
 cb28da8a9d6405166b51a09049cbfbb2 *tests/testthat/test-utils-redacted.R
 f22275174236f295431faf89e3ab922c *tests/testthat/test-utils.R
