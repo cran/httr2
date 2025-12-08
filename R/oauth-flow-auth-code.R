@@ -63,7 +63,7 @@
 #'
 #'   Secondly, you can provide a URL to a website that uses Javascript to
 #'   give the user a code to copy and paste back into the R session (see
-#'   <https://www.tidyverse.org/google-callback/> and
+#'   <https://tidyverse.org/google-callback/> and
 #'   <https://github.com/r-lib/gargle/blob/main/inst/pseudo-oob/google-callback/index.html>
 #'   for examples). This is less convenient (because it requires more
 #'   user interaction) but also works in hosted environments like RStudio
@@ -193,7 +193,7 @@ normalize_redirect_uri <- function(redirect_uri, error_call = caller_env()) {
   localhost <- parsed$hostname %in% c("localhost", "127.0.0.1")
 
   if (localhost) {
-    check_installed("httpuv", "desktop OAuth")
+    check_installed("httpuv", "for desktop OAuth", call = NULL)
     if (is_hosted_session()) {
       cli::cli_abort(
         "Can't use localhost {.arg redirect_uri} in a hosted environment.",

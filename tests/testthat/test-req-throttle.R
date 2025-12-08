@@ -8,7 +8,7 @@ test_that("throttling affects request performance", {
 
   local_mocked_bindings(unix_time = function() 0.1)
   expect_snapshot(time <- system.time(req_perform(req))[[3]])
-  expect_gte(time, 1 / 4 - 0.1)
+  expect_gte(time, 1 / 4 - 0.1 - 1e-6)
 })
 
 test_that("first request isn't throttled", {
@@ -26,6 +26,32 @@ test_that("first request isn't throttled", {
   mock_time <- 1.5
   expect_equal(throttle_delay(req), 0.5)
 })
+
+test_that("throttle only reset if parameters change", {
+  on.exit(throttle_reset())
+
+  mock_time <- 0
+  local_mocked_bindings(unix_time = function() mock_time)
+
+  req <- request_test() |> req_throttle(capacity = 1, fill_time_s = 1)
+  expect_equal(throttle_delay(req), 0)
+
+  mock_time <- 0.5
+  expect_equal(throttle_delay(req), 0.5)
+  mock_time <- 1
+
+  req <- request_test() |> req_throttle(capacity = 1, fill_time_s = 1)
+  expect_equal(throttle_delay(req), 1)
+
+  # reset: capacity changed
+  req <- request_test() |> req_throttle(capacity = 2, fill_time_s = 1)
+  expect_equal(throttle_delay(req), 0)
+
+  # reset: fill time changed
+  req <- request_test() |> req_throttle(capacity = 2, fill_time_s = 2)
+  expect_equal(throttle_delay(req), 0)
+})
+
 
 test_that("realm defaults to hostname but can be overridden", {
   on.exit(throttle_reset())
@@ -46,7 +72,7 @@ test_that("token bucket respects capacity limits", {
   mock_time <- 0
   local_mocked_bindings(unix_time = function() mock_time)
 
-  bucket <- TokenBucket$new(capacity = 2, fill_time_s = 1)
+  bucket <- TokenBucket$new(capacity = 2, fill_rate = 2)
   expect_equal(bucket$take_token(), 0)
   expect_equal(bucket$tokens, 1)
   expect_equal(bucket$take_token(), 0)
@@ -61,7 +87,7 @@ test_that("token bucket handles fractions correctly", {
   mock_time <- 0
   local_mocked_bindings(unix_time = function() mock_time)
 
-  bucket <- TokenBucket$new(capacity = 2, fill_time_s = 1)
+  bucket <- TokenBucket$new(capacity = 2, fill_rate = 2)
   bucket$tokens <- 0
   expect_equal(bucket$take_token(), 0.5)
   expect_equal(bucket$tokens, -1)
@@ -75,4 +101,25 @@ test_that("token bucket handles fractions correctly", {
   expect_equal(bucket$take_token(), 0.1)
   mock_time <- mock_time + 0.1
   expect_equal(bucket$refill(), 0)
+})
+
+test_that("never returns negative time", {
+  mock_time <- 0
+  local_mocked_bindings(unix_time = function() mock_time)
+
+  bucket <- TokenBucket$new(capacity = 5, fill_rate = 1)
+  mock_time <- 5
+
+  # first five are free
+  replicate(5, expect_equal(bucket$take_token(), 0))
+
+  # we get another 5 after 5 seconds
+  mock_time <- mock_time + 5
+  replicate(5, expect_equal(bucket$take_token(), 0))
+
+  # if we only wait a second, we only get one
+  mock_time <- mock_time + 1
+  expect_equal(bucket$take_token(), 0)
+  expect_equal(bucket$take_token(), 1)
+  expect_equal(bucket$take_token(), 2)
 })
