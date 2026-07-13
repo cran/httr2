@@ -101,6 +101,58 @@ test_that("can retrieve non-expired token from cache", {
   expect_equal(auth_oauth_token_get(cache, oauth_flow_refresh), token)
 })
 
+test_that("expiry margin controls when cached tokens are refreshed", {
+  client <- oauth_client("test", "http://example.org/test")
+  cache <- cache_mem(client)
+  cached <- oauth_token("cached", expires_in = 60)
+  refreshed <- oauth_token("refreshed")
+  cache$set(cached)
+
+  expect_equal(
+    auth_oauth_token_get(cache, function(...) refreshed, expiry_margin = 30),
+    cached
+  )
+  expect_equal(
+    auth_oauth_token_get(cache, function(...) refreshed, expiry_margin = 90),
+    refreshed
+  )
+  expect_equal(cache$get(), refreshed)
+})
+
+test_that("expiry margin preserves refresh token behavior", {
+  client <- oauth_client("test", "http://example.org/test")
+  cache <- cache_mem(client)
+  cache$set(
+    oauth_token("cached", refresh_token = "refresh", expires_in = 60)
+  )
+
+  local_mocked_bindings(
+    token_refresh = function(client, refresh_token, token_params = list()) {
+      oauth_token("refreshed", used_refresh_token = refresh_token)
+    }
+  )
+
+  token <- auth_oauth_token_get(
+    cache,
+    function(...) NULL,
+    flow_params = list(client = client),
+    expiry_margin = 90
+  )
+  expect_equal(token$access_token, "refreshed")
+  expect_equal(token$used_refresh_token, "refresh")
+})
+
+test_that("req_oauth validates and stores expiry margin", {
+  req <- request("https://example.com")
+  req <- req_oauth(req, "", list(), NULL, expiry_margin = 40)
+
+  expect_equal(req$policies$auth_sign$params$expiry_margin, 40)
+  expect_snapshot(
+    req_oauth(req, "", list(), NULL, expiry_margin = -1),
+    error = TRUE
+  )
+})
+
 
 # Cache -------------------------------------------------------------------
 
@@ -158,10 +210,49 @@ test_that("can explicitly clear cached value", {
 
 test_that("can prune old files", {
   path <- withr::local_tempdir()
-  touch(file.path(path, "a-token.rds"), Sys.time() - 86400 * 1)
-  touch(file.path(path, "b-token.rds"), Sys.time() - 86400 * 2)
+  touch(file.path(path, "a-token.rds.enc"), Sys.time() - 86400 * 1)
+  touch(file.path(path, "b-token.rds.enc"), Sys.time() - 86400 * 2)
   cache_disk_prune(2, path)
-  expect_equal(dir(path), "a-token.rds")
+  expect_equal(dir(path), "a-token.rds.enc")
+})
+
+test_that("prunes old files from both new and legacy locations", {
+  new_path <- withr::local_tempdir()
+  legacy_path <- withr::local_tempdir()
+  local_mocked_bindings(
+    oauth_cache_path = function() new_path,
+    oauth_cache_path_legacy = function() legacy_path
+  )
+
+  touch(file.path(new_path, "a-token.rds.enc"), Sys.time() - 86400 * 1)
+  touch(file.path(new_path, "b-token.rds.enc"), Sys.time() - 86400 * 2)
+  touch(file.path(legacy_path, "a-token.rds.enc"), Sys.time() - 86400 * 1)
+  touch(file.path(legacy_path, "b-token.rds.enc"), Sys.time() - 86400 * 2)
+
+  cache_disk_prune(2)
+
+  expect_equal(dir(new_path), "a-token.rds.enc")
+  expect_equal(dir(legacy_path), "a-token.rds.enc")
+})
+
+test_that("oauth_cache_prune() prunes the default cache locations", {
+  new_path <- withr::local_tempdir()
+  legacy_path <- withr::local_tempdir()
+  local_mocked_bindings(
+    oauth_cache_path = function() new_path,
+    oauth_cache_path_legacy = function() legacy_path
+  )
+
+  touch(file.path(new_path, "a-token.rds.enc"), Sys.time() - 86400 * 1)
+  touch(file.path(new_path, "b-token.rds.enc"), Sys.time() - 86400 * 2)
+
+  oauth_cache_prune(2)
+
+  expect_equal(dir(new_path), "a-token.rds.enc")
+})
+
+test_that("oauth_cache_prune() validates its input", {
+  expect_snapshot(oauth_cache_prune("x"), error = TRUE)
 })
 
 # cache_path --------------------------------------------------------------
@@ -169,4 +260,33 @@ test_that("can prune old files", {
 test_that("can override path with env var", {
   withr::local_envvar("HTTR2_OAUTH_CACHE" = "/tmp")
   expect_equal(oauth_cache_path(), "/tmp")
+})
+
+test_that("inlined legacy path matches rappdirs", {
+  path <- oauth_cache_path_legacy()
+  rappdirs_path <- rappdirs::user_cache_dir("httr2")
+
+  if (.Platform$OS.type == "windows") {
+    # rappdirs uses the CSIDL API, which can return an 8.3 short form of
+    # the user's home directory, while our env-var based path uses the
+    # long form. Both refer to the same directory, so convert to the
+    # (existing) directory's canonical short form before comparing.
+    dir.create(path, recursive = TRUE, showWarnings = FALSE)
+    withr::defer(unlink(path, recursive = TRUE))
+    path <- utils::shortPathName(path)
+    rappdirs_path <- utils::shortPathName(rappdirs_path)
+  }
+
+  expect_equal(
+    normalizePath(path, mustWork = FALSE),
+    normalizePath(rappdirs_path, mustWork = FALSE)
+  )
+})
+
+test_that("legacy path respects R_USER_CACHE_DIR", {
+  path <- withr::local_tempdir()
+  withr::local_envvar("R_USER_CACHE_DIR" = path)
+
+  expected <- rappdirs::user_cache_dir("httr2")
+  expect_equal(oauth_cache_path_legacy(), expected)
 })

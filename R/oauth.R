@@ -15,36 +15,57 @@
 #' @param flow An `oauth_flow_` function used to generate the access token.
 #' @param flow_params Parameters for the flow. This should be a named list
 #'   whose names match the argument names of `flow`.
+#' @param expiry_margin Number of seconds before a token's stated expiry that
+#'   it should be treated as expired. Increase this for servers that reject
+#'   tokens shortly before they expire. Defaults to 30 seconds.
 #' @returns An [oauth_token].
 #' @keywords internal
 #' @export
-req_oauth <- function(req, flow, flow_params, cache) {
+req_oauth <- function(req, flow, flow_params, cache, expiry_margin = 30) {
+  check_number_whole(expiry_margin, min = 0)
+
   # Want req object to contain meaningful objects, not just a closure
   req <- req_auth_sign(
     req,
     fun = auth_oauth_sign,
-    params = list(flow = flow, flow_params = flow_params),
+    params = list(
+      flow = flow,
+      flow_params = flow_params,
+      expiry_margin = expiry_margin
+    ),
     cache = cache
   )
   req <- req_policies(req, auth_oauth = TRUE)
   req
 }
 
-auth_oauth_sign <- function(req, cache, flow, flow_params) {
+auth_oauth_sign <- function(
+  req,
+  cache,
+  flow,
+  flow_params,
+  expiry_margin = 30
+) {
   token <- auth_oauth_token_get(
     cache = cache,
     flow = flow,
-    flow_params = flow_params
+    flow_params = flow_params,
+    expiry_margin = expiry_margin
   )
   req_auth_bearer_token(req, token$access_token)
 }
 
-auth_oauth_token_get <- function(cache, flow, flow_params = list()) {
+auth_oauth_token_get <- function(
+  cache,
+  flow,
+  flow_params = list(),
+  expiry_margin = 30
+) {
   token <- cache$get()
   if (is.null(token)) {
     token <- exec(flow, !!!flow_params)
     cache$set(token)
-  } else if (token_has_expired(token)) {
+  } else if (token_has_expired(token, delay = expiry_margin)) {
     cache$clear()
     if (is.null(token$refresh_token)) {
       token <- exec(flow, !!!flow_params)
@@ -188,17 +209,38 @@ cache_disk <- function(client, key = NULL) {
   )
 }
 
+#' Prune the OAuth token cache
+#'
+#' Deletes cached OAuth tokens (from both the current and legacy cache
+#' directories, see [oauth_cache_path()]) that are older than
+#' `max_age_days`. This is called automatically when httr2 is loaded, so
+#' you should only need to call it yourself if you want to prune the cache
+#' immediately.
+#'
+#' @param max_age_days Delete cached tokens that haven't been modified in
+#'   this many days.
+#' @export
+oauth_cache_prune <- function(max_age_days = 30) {
+  check_number_whole(max_age_days, min = 0)
+
+  cache_disk_prune(max_age_days)
+  invisible()
+}
+
 # Update req_oauth_auth_code() docs if change default from 30
-cache_disk_prune <- function(days = 30, path = oauth_cache_path()) {
+cache_disk_prune <- function(
+  max_age_days = 30,
+  paths = c(oauth_cache_path(), oauth_cache_path_legacy())
+) {
   files <- dir(
-    path,
+    paths,
     recursive = TRUE,
     full.names = TRUE,
-    pattern = "-token\\.rds$"
+    pattern = "-token\\.rds\\.enc$"
   )
   mtime <- file.mtime(files)
 
-  old <- mtime < (Sys.time() - days * 86400)
+  old <- mtime < (Sys.time() - max_age_days * 86400)
   unlink(files[old])
 }
 
@@ -211,13 +253,35 @@ cache_disk_prune <- function(days = 30, path = oauth_cache_path()) {
 #' @export
 oauth_cache_path <- function() {
   path <- Sys.getenv("HTTR2_OAUTH_CACHE")
-  if (path != "") {
-    return(path)
+  if (nzchar(path)) {
+    path
+  } else {
+    tools::R_user_dir("httr2", which = "cache")
+  }
+}
+# Equivalent to rappdirs::user_cache_dir("httr2"), inlined so httr2 doesn't
+# depend on rappdirs solely to find tokens cached by older versions. The
+# appname is nested twice and gains a "Cache" subdir on Windows because that's
+# what rappdirs did with its default `appauthor` and `opinion` arguments.
+oauth_cache_path_legacy <- function() {
+  base <- Sys.getenv("R_USER_CACHE_DIR")
+  if (nzchar(base)) {
+    if (.Platform$OS.type == "windows") {
+      return(file.path(base, "httr2", "httr2", "Cache"))
+    } else {
+      return(file.path(base, "httr2"))
+    }
   }
 
-  rappdirs::user_cache_dir("httr2")
+  if (.Platform$OS.type == "windows") {
+    base <- Sys.getenv("LOCALAPPDATA", Sys.getenv("APPDATA"))
+    file.path(base, "httr2", "httr2", "Cache")
+  } else if (Sys.info()[["sysname"]] == "Darwin") {
+    "~/Library/Caches/httr2"
+  } else {
+    file.path(Sys.getenv("XDG_CACHE_HOME", "~/.cache"), "httr2")
+  }
 }
-
 
 #' Clear OAuth cache
 #'
